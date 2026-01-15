@@ -136,18 +136,25 @@ interface VocabularySource {
 
 #### 4.1.3 User Interface Flow
 ```
-1. On the homepage, the user clicks on the Start Practice button
-2. The Practice view opens, showing a word card above a conversational chat interface
-3. System selects a word based on the confidence algorithm and displays it in the word card
-4. System sends a chat message prompt: "请用'[word]'造一个句子" (Please make a sentence using '[word]')
-5. User types their sentence as a chat reply and presses Enter or clicks the Send button
-6. System evaluates the sentence and replies in the chat with feedback, scores, and example sentences
-7. User can choose to reattempt this word (new attempt for learning, but does not increase the unique word count) or move on to the next word
-8. Steps 3–7 repeat until the practiced words threshold of unique words is met (default is 10)
-9. After the session ends, the system makes a separate call to Gemini Flash to generate a teacher-style practice session summary (2 strengths, 1 area for improvement)
-10. On the sidebar, the user can select the 'Vocabulary' section to view all words and manually add, edit, or delete vocabulary
-11. On the sidebar, the user can select the 'Settings' section to change the practiced words threshold
-12. On the sidebar, the user can navigate to 'Files' to import vocabulary from CSV files
+1. User lands on Welcome Message page with two options:
+   - "Import vocabulary" button to add CSV file containing vocabulary list
+   - "Skip for now" link to proceed to homepage without importing
+2. Homepage displays:
+   - Total word count at top right
+   - Summary statistics in middle top (Today's Progress, Mastery Level, Ready to Review)
+   - Large "Start Practice" button in center with gradient (pink to purple to blue)
+   - Greeting message with time-based icon (Good morning/afternoon/evening)
+3. When user clicks "Start Practice", the Practice view opens with a word card above a conversational chat interface
+4. System selects a word based on the confidence algorithm and displays it in the word card
+5. System sends a chat message prompt: "请用'[word]'造一个句子" (Please make a sentence using '[word]')
+6. User types their sentence as a chat reply and presses Enter or clicks the Send button
+7. System evaluates the sentence and replies in the chat with feedback, scores, and example sentences
+8. User can choose to reattempt this word (new attempt for learning, but does not increase the unique word count) or move on to the next word
+9. Steps 4–8 repeat until the practiced words threshold of unique words is met (default is 10)
+10. After the session ends, the system makes a separate call to Gemini Flash to generate a teacher-style practice session summary (2 strengths, 1 area for improvement)
+11. On the sidebar, the user can select the 'Vocabulary' section to view all words and manually add, edit, or delete vocabulary
+12. On the sidebar, the user can select the 'Settings' section to change the practiced words threshold
+13. On the sidebar, the user can navigate to 'Files' to import vocabulary from CSV files
 ```
 
 ### 4.2 Sentence Formation Practice Module
@@ -444,18 +451,35 @@ word,pinyin,definition,partOfSpeech
 
 ### 5.2 Key Pages/Views
 
-#### 5.2.1 Home/Dashboard
-- **Header**: Greeting (e.g., "Good morning") with time-based icon
-- Progress Summary (words practiced today, mastery progress)
-- "Start Practice" button
-- **Get Started Section** (for new users):
-  - Checklist items with icons
-  - "Import vocabulary from CSV"
-  - "Start practicing"
+#### 5.2.1 Welcome Message Page (First-Time Experience)
+- **Design**: White rounded card centered on gradient background
+- **Icon**: Purple rocket illustration with sparkles
+- **Heading**: "Welcome to the classroom" (large, bold, dark text)
+- **Subheading**: "Let's start by adding some words you'd like to learn" (gray text)
+- **Primary Action**: "Import vocabulary" button (vibrant purple, rounded, prominent)
+- **Secondary Action**: "Skip for now" link (gray text, subtle)
+- **Color Scheme**: Purple accent (#9333EA or similar), clean white card, soft gradient background
+
+#### 5.2.2 Home/Dashboard
+- **Header**:
+  - Left side: Greeting with time-based icon (e.g., "🌞 Good afternoon")
+  - Right side: Total word count badge ("Total: X words" in purple/gray text)
+- **Main Content Card**: White rounded card with subtle shadow
+  - **Message**: "🎓 Laoshi is waiting for you to start practicing" (purple text)
+  - **Statistics Grid** (3 columns):
+    - Today's Progress: Circular icon (purple), "0 words practiced", progress bar
+    - Mastery Level: Upward arrow icon (blue), "0% overall progress", progress bar
+    - Ready to Review: Award icon (pink), "0 words waiting", link to "Import words to get started →"
+- **Action Button**: Large "Start Practice" button
+  - Gradient: Pink → Purple → Blue
+  - White book icon
+  - Centered below stats card
+  - Subtitle: "Begin your learning journey and master new vocabulary" (gray text)
+- **Sidebar**: Icon-based navigation (home, charts, vocabulary, folder, settings)
 
 
 
-#### 5.2.2 Practice View
+#### 5.2.3 Practice View
 - **Word Card**: 
   - Large, centered Chinese characters
   - Tooltip on hover showing pinyin and English definition
@@ -467,7 +491,7 @@ word,pinyin,definition,partOfSpeech
   - Skip option (subtle, text link)
 - **Progress Indicator**: Minimal dot indicator or progress bar
 
-#### 5.2.3 Results/Feedback View
+#### 5.2.4 Results/Feedback View
 - **Result Badge**: Large checkmark (✓) or X icon with score
 - **Score Breakdown**: Minimal horizontal bars or numbers
 - **Feedback Card**: 
@@ -479,7 +503,7 @@ word,pinyin,definition,partOfSpeech
   - **Reattempt word / Try Again** (secondary): lets the user practice the same word again; affects attempts and confidence but does **not** increase the unique words count for the session
   - **Next Word** (primary, purple): moves on to the next vocabulary item and increments the unique word counter (if this is the first evaluated attempt for that word in the session)
 
-#### 5.2.4 Vocabulary Management
+#### 5.2.5 Vocabulary Management
 - **Source Cards**: Card-based layout (like "Inbox" and "Example space" from reference)
 - **CSV Import**: 
   - Drag-and-drop area or file picker
@@ -490,7 +514,7 @@ word,pinyin,definition,partOfSpeech
   - Confidence score as colored badge
   - Search and filter in header
 
-#### 5.2.5 Progress Dashboard (Future Phase)
+#### 5.2.6 Progress Dashboard (Future Phase)
 - **Stats Cards**: Minimal cards with numbers
 - **Chart**: Clean, simple line or bar chart
 - **Mastery Breakdown**: Color-coded progress indicators
