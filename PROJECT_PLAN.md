@@ -137,24 +137,38 @@ interface VocabularySource {
 #### 4.1.3 User Interface Flow
 ```
 1. User lands on Welcome Message page with two options:
-   - "Import vocabulary" button to add CSV file containing vocabulary list
+   - "Get started" button to navigate to the Vocabulary page
    - "Skip for now" link to proceed to homepage without importing
-2. Homepage displays:
+2. Vocabulary page displays:
+   - "Import from file" button in header (purple, rounded)
+   - Search bar for filtering words
+   - "Sort by Pinyin" dropdown
+   - Table with columns: #, 中文, Pinyin, Meaning, Source Name, Actions (edit/delete icons)
+   - Empty state message: "No words yet... Let's start by clicking Import from file to add some words!"
+   - "Showing X of Y words" counter at bottom
+3. When user clicks "Import from file", an upload file popup modal opens:
+   - Title: "Upload file"
+   - Subtitle: "Only .csv files are accepted"
+   - Drag-and-drop area with "Click to Upload or drag and drop" text
+   - "Maximum file size 10 MB" note
+   - "Name your source file" input field with placeholder "e.g., Kitchen Vocabulary"
+   - Helper text: "Words from this file will be tagged with the following name for easy identification"
+   - "Cancel" and "Attach File" buttons
+4. Homepage displays:
    - Total word count at top right
    - Summary statistics in middle top (Today's Progress, Mastery Level, Ready to Review)
    - Large "Start Practice" button in center with gradient (pink to purple to blue)
    - Greeting message with time-based icon (Good morning/afternoon/evening)
-3. When user clicks "Start Practice", the Practice view opens with a word card above a conversational chat interface
-4. System selects a word based on the confidence algorithm and displays it in the word card
-5. System sends a chat message prompt: "请用'[word]'造一个句子" (Please make a sentence using '[word]')
-6. User types their sentence as a chat reply and presses Enter or clicks the Send button
-7. System evaluates the sentence and replies in the chat with feedback, scores, and example sentences
-8. User can choose to reattempt this word (new attempt for learning, but does not increase the unique word count) or move on to the next word
-9. Steps 4–8 repeat until the practiced words threshold of unique words is met (default is 10)
-10. After the session ends, the system makes a separate call to Gemini Flash to generate a teacher-style practice session summary (2 strengths, 1 area for improvement)
-11. On the sidebar, the user can select the 'Vocabulary' section to view all words and manually add, edit, or delete vocabulary
-12. On the sidebar, the user can select the 'Settings' section to change the practiced words threshold
-13. On the sidebar, the user can navigate to 'Files' to import vocabulary from CSV files
+5. When user clicks "Start Practice", the Practice view opens with a word card above a conversational chat interface
+6. System selects a word based on the confidence algorithm and displays it in the word card
+7. System sends a chat message prompt: "请用'[word]'造一个句子" (Please make a sentence using '[word]')
+8. User types their sentence as a chat reply and presses Enter or clicks the Send button
+9. System evaluates the sentence and replies in the chat with feedback, scores, and example sentences
+10. User can choose to reattempt this word (new attempt for learning, but does not increase the unique word count) or move on to the next word
+11. Steps 6–10 repeat until the practiced words threshold of unique words is met (default is 10, configurable in Settings)
+12. After the session ends, the system makes a separate call to Gemini Flash to generate a teacher-style practice session summary (2 strengths, 1 area for improvement)
+13. On the sidebar, the user can select the 'Vocabulary' section to view all words, import from CSV, and manually add, edit, or delete vocabulary
+14. On the sidebar, the user can select the 'Settings' section to change the practiced words threshold
 ```
 
 ### 4.2 Sentence Formation Practice Module
@@ -378,25 +392,28 @@ word,pinyin,definition,partOfSpeech
 ```
 
 **Import Process**:
-1. User uploads CSV file via file input in the **Files** section
-2. Client-side validation (file type, structure)
-3. Parse CSV (use PapaParse or similar library)
-4. Extract word, pinyin, definition
-5. Validate data (non-empty fields, valid characters)
-6. Create vocabulary source entry
-7. Store words in database
-8. Display import summary (successful, failed, duplicates)
+1. User clicks "Import from file" button on the **Vocabulary** page
+2. Upload file modal opens with drag-and-drop area
+3. User selects CSV file and enters source name
+4. Client-side validation (file type, structure, max 10MB)
+5. Parse CSV (use PapaParse or similar library)
+6. Extract word, pinyin, definition
+7. Validate data (non-empty fields, valid characters)
+8. Create vocabulary source entry with user-provided name
+9. Store words in database via POST /api/vocabulary/import
+10. Display import summary (successful, failed, duplicates)
+11. Refresh vocabulary table to show new words
 
 **Error Handling**:
-- Invalid file format
+- Invalid file format (only .csv accepted)
 - Missing required columns
 - Duplicate words
 - Encoding issues (UTF-8 support)
-- Large file handling (chunked processing)
+- Large file handling (max 10MB)
 
 **Location in UI**:
-- CSV import is accessed **only** via the `Files` section in the sidebar.
-- The `Vocabulary` section is used for viewing and manually managing existing vocabulary, not for file uploads.
+- CSV import is accessed via the "Import from file" button on the **Vocabulary** page.
+- The Vocabulary page handles both viewing/managing existing vocabulary AND file imports.
 
 #### 4.6.2 Vocabulary Source Management
 - **Source Selection Interface**:
@@ -433,8 +450,8 @@ word,pinyin,definition,partOfSpeech
 │ • Home    │ │ Header: Greeting | Progress Summary │   │
 │ • Progress│ └─────────────────────────────────────┘   │
 │ • Vocabulary                                      │   │
-│ • Files   │  Main Content:                        │   │
-│ • Settings│  (Start button / Practice chat /      │   │
+│ • Settings│  Main Content:                        │   │
+│           │  (Start button / Practice chat /      │   │
 │           │   Practice session summary)           │   │
 │           │                                       │   │
 └─────────────────────────────────────────────────────────┘
@@ -456,8 +473,8 @@ word,pinyin,definition,partOfSpeech
 - **Icon**: Purple rocket illustration with sparkles
 - **Heading**: "Welcome to the classroom" (large, bold, dark text)
 - **Subheading**: "Let's start by adding some words you'd like to learn" (gray text)
-- **Primary Action**: "Import vocabulary" button (vibrant purple, rounded, prominent)
-- **Secondary Action**: "Skip for now" link (gray text, subtle)
+- **Primary Action**: "Get started" button (vibrant purple, rounded, prominent) - navigates to Vocabulary page
+- **Secondary Action**: "Skip for now" link (gray text, subtle) - navigates to Home page
 - **Color Scheme**: Purple accent (#9333EA or similar), clean white card, soft gradient background
 
 #### 5.2.2 Home/Dashboard
@@ -475,46 +492,101 @@ word,pinyin,definition,partOfSpeech
   - White book icon
   - Centered below stats card
   - Subtitle: "Begin your learning journey and master new vocabulary" (gray text)
-- **Sidebar**: Icon-based navigation (home, charts, vocabulary, folder, settings)
+- **Sidebar**: Icon-based navigation (home, charts, vocabulary, settings)
 
 
 
 #### 5.2.3 Practice View
-- **Word Card**: 
-  - Large, centered Chinese characters
-  - Tooltip on hover showing pinyin and English definition
-  - Confidence indicator (subtle progress bar or badge)
-- **Sentence Input**: 
-  - Large, clean text input area
-  - Character count (subtle, bottom right)
-  - Submit button (purple, prominent)
-  - Skip option (subtle, text link)
-- **Progress Indicator**: Minimal dot indicator or progress bar
+- **Layout**: Three-column design
+  - Left sidebar: Word card panel with practice/skipped word trays
+  - Center: Chat interface with Laoshi
+  - Header: "← Back to Home" navigation, progress indicator
+
+- **Left Sidebar**:
+  - **Header**: "← Back to Home" link at top, "X / 10 words practiced" progress with colored bar
+  - **CURRENT WORD Section**:
+    - Section header with two toggle buttons:
+      - 拼 (Pinyin toggle) - purple when active, shows/hides pinyin
+      - 文 (Translation toggle) - purple when active, shows/hides English definition
+    - Word Card:
+      - Large Chinese characters (centered, prominent)
+      - Pinyin below characters (shown when 拼 toggle is active)
+      - English definition below pinyin (shown when 文 toggle is active)
+      - Gradient background (light pink to light blue, subtle)
+      - "Confidence Level" label with mastery badge:
+        - Orange "Learning" badge for learning words
+        - Color-coded by mastery level (needs revision/learning/reviewing/mastered)
+  - **PRACTICED WORDS Tray**: Collapsible section with chevron, lists completed words
+  - **SKIPPED WORDS Tray**: Collapsible section with chevron, lists skipped words
+
+- **Chat Interface (Center)**:
+  - **Chat Header**:
+    - Laoshi avatar (circular, with logo)
+    - "Laoshi" name in bold
+    - "Online" status with green dot
+  - **Message Area**:
+    - Laoshi messages: Left-aligned, white/light gray bubble, rounded corners, timestamp below
+    - User messages: Right-aligned, **solid purple background (#9333EA)**, white text, rounded corners, timestamp below
+    - Initial prompt: "请用'[word]'造一个句子" from Laoshi
+    - Feedback messages include encouragement and corrections
+
+- **Input Area (Bottom)**:
+  - Large text input field with placeholder "Type your sentence here..."
+  - "Skip this word" link with skip icon (⏭) on bottom left
+  - Character count on bottom right (e.g., "0 characters")
+  - "Submit" button with send icon (➤), pink/purple gradient background
 
 #### 5.2.4 Results/Feedback View
-- **Result Badge**: Large checkmark (✓) or X icon with score
-- **Score Breakdown**: Minimal horizontal bars or numbers
-- **Feedback Card**: 
-  - Clean white card with subtle border
-  - Feedback text in readable format
-  - Corrections in highlighted sections
-  - Example sentences in separate cards
-- **Action Buttons**:
-  - **Reattempt word / Try Again** (secondary): lets the user practice the same word again; affects attempts and confidence but does **not** increase the unique words count for the session
-  - **Next Word** (primary, purple): moves on to the next vocabulary item and increments the unique word counter (if this is the first evaluated attempt for that word in the session)
+- **Integrated in Chat**: Feedback appears as Laoshi's response message in the chat
+- **Feedback Content**:
+  - Encouragement (e.g., "Great job! 很好！")
+  - Explanation of sentence quality
+  - Corrections if needed
+  - Natural conversational tone
+- **Word Progression**: After feedback, user can continue practicing same word or move to next
 
 #### 5.2.5 Vocabulary Management
-- **Source Cards**: Card-based layout (like "Inbox" and "Example space" from reference)
-- **CSV Import**: 
-  - Drag-and-drop area or file picker
-  - Clean upload interface
-  - Import progress indicator
-- **Word List**: 
-  - Minimal table or card grid
-  - Confidence score as colored badge
-  - Search and filter in header
+- **Header**:
+  - "Vocabulary" title (large, bold)
+  - "Import from file" button (purple, rounded, with upload icon)
+- **Search & Filter Bar**:
+  - Search input with placeholder "Search words..."
+  - "Sort by Pinyin" dropdown on the right
+- **Vocabulary Table**:
+  - Columns: #, 中文, Pinyin, Meaning, Source Name, Actions
+  - Row numbers (1, 2, 3...)
+  - Chinese word in bold
+  - Pinyin in regular text
+  - Meaning/definition
+  - Source name (file name the word was imported from)
+  - Actions: Edit (pencil icon) and Delete (trash icon) buttons
+  - Alternating row backgrounds for readability
+- **Empty State** (when no words exist):
+  - Message: "No words yet... Let's start by clicking Import from file to add some words!"
+- **Footer**:
+  - "Showing X of Y words" counter
 
-#### 5.2.6 Progress Dashboard (Future Phase)
+#### 5.2.6 Upload File Modal
+- **Overlay**: Semi-transparent gray background
+- **Modal Card**: White rounded card centered on screen
+- **Header**:
+  - "Upload file" title
+  - "Only .csv files are accepted" subtitle
+  - Close button (X) in top-right
+- **Upload Area**:
+  - Dashed border container
+  - Upload icon (purple)
+  - "Click to Upload or drag and drop" text
+  - "Maximum file size 10 MB" note
+- **Source Name Input**:
+  - Label: "Name your source file"
+  - Helper text: "Words from this file will be tagged with the following name for easy identification"
+  - Input field with placeholder "e.g., Kitchen Vocabulary"
+- **Action Buttons**:
+  - "Cancel" button (gray/white, outlined)
+  - "Attach File" button (purple, filled)
+
+#### 5.2.7 Progress Dashboard (Future Phase)
 - **Stats Cards**: Minimal cards with numbers
 - **Chart**: Clean, simple line or bar chart
 - **Mastery Breakdown**: Color-coded progress indicators
@@ -961,11 +1033,14 @@ You can share the connection string directly, or we can set it up as an environm
 **Features**:
 - **Frontend (Vercel)**:
   - ✅ Minimalist UI with Tailwind CSS (COMPLETE)
-  - Home dashboard with greeting and quick stats
-  - Practice view with word card and sentence input
-  - Results view with feedback and corrections
-  - Vocabulary view for browsing and manually managing words
-  - Basic progress tracking display
+  - ✅ Welcome page with "Get started" and "Skip for now" options (COMPLETE)
+  - ✅ Home dashboard with greeting and quick stats (COMPLETE)
+  - ✅ Practice view with word card, chat interface, and sentence input (COMPLETE)
+  - ✅ Sidebar navigation (Home, Progress, Vocabulary, Settings) (COMPLETE)
+  - ✅ Vocabulary page with table, search, sort, and import functionality (COMPLETE)
+  - ✅ Upload file modal with drag-and-drop and source naming (COMPLETE)
+  - Results view with feedback and corrections (in-chat, partially complete)
+  - Basic progress tracking display (placeholder)
   
 - **Backend (Flask)**:
   - RESTful API endpoints

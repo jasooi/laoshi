@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 const Welcome = () => {
   const navigate = useNavigate()
 
-  const handleImportClick = () => {
-    navigate('/files')
+  const handleGetStarted = () => {
+    navigate('/vocabulary')
   }
 
   const handleSkipClick = () => {
@@ -56,12 +56,12 @@ const Welcome = () => {
           Let's start by adding some words you'd like to learn
         </p>
 
-        {/* Import Button */}
+        {/* Get Started Button */}
         <button
-          onClick={handleImportClick}
+          onClick={handleGetStarted}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-full mb-4 transition-colors shadow-md"
         >
-          Import vocabulary
+          Get started
         </button>
 
         {/* Skip Link */}

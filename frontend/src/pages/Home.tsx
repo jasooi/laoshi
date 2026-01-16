@@ -1,10 +1,43 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
 const Home = () => {
-  const totalWords = 0
-  const wordsToday = 0
-  const masteryProgress = 0
-  const wordsWaiting = 0
+  const [totalWords, setTotalWords] = useState(0)
+  const [wordsToday, setWordsToday] = useState(0)
+  const [masteryProgress, setMasteryProgress] = useState(0)
+  const [wordsWaiting, setWordsWaiting] = useState(0)
+  const [loading, setLoading] = useState(true)
+
+  // Fetch stats from API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Fetch vocabulary count
+        const vocabResponse = await fetch('/api/vocabulary')
+        if (vocabResponse.ok) {
+          const vocabData = await vocabResponse.json()
+          setTotalWords(vocabData.length || 0)
+          setWordsWaiting(vocabData.length || 0) // For now, all words are waiting
+        }
+
+        // Fetch progress stats
+        const progressResponse = await fetch('/api/progress/stats')
+        if (progressResponse.ok) {
+          const progressData = await progressResponse.json()
+          setWordsToday(progressData.wordsToday || 0)
+          setMasteryProgress(progressData.masteryProgress || 0)
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  const hasWords = totalWords > 0
 
   // Get greeting based on time of day
   const getGreeting = () => {
@@ -85,28 +118,44 @@ const Home = () => {
               <span className="text-gray-700 font-medium">Ready to Review</span>
             </div>
             <div className="text-3xl font-bold text-gray-900 mb-1">{wordsWaiting}</div>
-            <div className="text-sm text-gray-500 mb-2">words waiting</div>
-            <Link
-              to="/files"
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-            >
-              Import words to get started →
-            </Link>
+            <div className="text-sm text-gray-500">words waiting</div>
           </div>
         </div>
       </div>
 
       {/* Start Practice Button */}
       <div className="flex flex-col items-center">
-        <button className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 text-white font-semibold py-5 px-12 rounded-full text-lg shadow-lg flex items-center gap-3 mb-3 transition-all transform hover:scale-105">
-          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
-          </svg>
-          Start Practice
-        </button>
-        <p className="text-gray-500 text-sm">
-          Begin your learning journey and master new vocabulary
-        </p>
+        {hasWords ? (
+          <>
+            <Link
+              to="/practice"
+              className="bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 hover:from-pink-600 hover:via-purple-600 hover:to-blue-600 text-white font-semibold py-5 px-12 rounded-full text-lg shadow-lg flex items-center gap-3 mb-3 transition-all transform hover:scale-105"
+            >
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+              </svg>
+              Start Practicing
+            </Link>
+            <p className="text-gray-500 text-sm">
+              Begin your learning journey and master new vocabulary
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="bg-gray-300 text-gray-500 font-semibold py-5 px-12 rounded-full text-lg shadow-sm flex items-center gap-3 mb-3 cursor-not-allowed">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" />
+              </svg>
+              Start Practicing
+            </div>
+            <Link
+              to="/vocabulary"
+              className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+            >
+              Import words to get started →
+            </Link>
+          </>
+        )}
       </div>
     </div>
   )
