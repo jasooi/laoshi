@@ -1,13 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-
-interface VocabularyWord {
-  id: string
-  word: string
-  pinyin: string
-  definition: string
-  confidenceLevel: string
-}
+import api from '../lib/api'
+import { Word } from '../types/api'
 
 interface Message {
   id: number
@@ -28,62 +22,45 @@ const Practice = () => {
   const [inputText, setInputText] = useState('')
   const [practicedWordsOpen, setPracticedWordsOpen] = useState(false)
   const [skippedWordsOpen, setSkippedWordsOpen] = useState(false)
-  const [currentWord, setCurrentWord] = useState<VocabularyWord | null>(null)
+  const [currentWord, setCurrentWord] = useState<Word | null>(null)
   const [loading, setLoading] = useState(true)
   const [messages, setMessages] = useState<Message[]>([])
-  const [practicedWords, setPracticedWords] = useState<VocabularyWord[]>([])
-  const [skippedWords, setSkippedWords] = useState<VocabularyWord[]>([])
+  const [practicedWords, setPracticedWords] = useState<Word[]>([])
+  const [skippedWords, setSkippedWords] = useState<Word[]>([])
 
   const wordsProgress = {
     current: practicedWords.length + 1,
     total: WORDS_TO_PRACTICE,
   }
 
+  const getMockWord = (): Word => ({
+    id: 1,
+    word: '学习',
+    pinyin: 'xué xí',
+    meaning: 'to study, to learn',
+    confidence_score: 0.5,
+    status: 'Learning',
+    source_name: null,
+  })
+
   // Fetch next word from API
   const fetchNextWord = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/practice/next-word')
-      if (response.ok) {
-        const data = await response.json()
-        setCurrentWord(data)
-        // Add initial prompt message from Laoshi
-        const promptMessage: Message = {
-          id: Date.now(),
-          sender: 'laoshi',
-          text: `请用'${data.word}'造一个句子`,
-          timestamp: getCurrentTime(),
-        }
-        setMessages((prev) => [...prev, promptMessage])
-      } else {
-        // Fallback if API is not available yet
-        console.log('API not available, using mock data')
-        const mockWord: VocabularyWord = {
-          id: '1',
-          word: '学习',
-          pinyin: 'xué xí',
-          definition: 'to study, to learn',
-          confidenceLevel: 'Learning',
-        }
-        setCurrentWord(mockWord)
-        const promptMessage: Message = {
-          id: Date.now(),
-          sender: 'laoshi',
-          text: `请用'${mockWord.word}'造一个句子`,
-          timestamp: getCurrentTime(),
-        }
-        setMessages((prev) => [...prev, promptMessage])
+      const response = await api.get('/api/practice/next-word')
+      const data = response.data
+      setCurrentWord(data)
+      const promptMessage: Message = {
+        id: Date.now(),
+        sender: 'laoshi',
+        text: `请用'${data.word}'造一个句子`,
+        timestamp: getCurrentTime(),
       }
-    } catch (error) {
-      console.error('Error fetching word:', error)
-      // Fallback mock data
-      const mockWord: VocabularyWord = {
-        id: '1',
-        word: '学习',
-        pinyin: 'xué xí',
-        definition: 'to study, to learn',
-        confidenceLevel: 'Learning',
-      }
+      setMessages((prev) => [...prev, promptMessage])
+    } catch {
+      // Fallback: endpoint does not exist yet, use mock data
+      console.log('API not available, using mock data')
+      const mockWord = getMockWord()
       setCurrentWord(mockWord)
       const promptMessage: Message = {
         id: Date.now(),
@@ -121,36 +98,19 @@ const Practice = () => {
     setMessages((prev) => [...prev, userMessage])
 
     try {
-      // Call evaluation API
-      const response = await fetch('/api/practice/evaluate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wordId: currentWord.id,
-          sentence: inputText,
-        }),
+      const response = await api.post('/api/practice/evaluate', {
+        wordId: currentWord.id,
+        sentence: inputText,
       })
-
-      if (response.ok) {
-        const evaluation = await response.json()
-        const laoshiResponse: Message = {
-          id: Date.now() + 1,
-          sender: 'laoshi',
-          text: evaluation.feedback || `Great job! 很好！ Your sentence shows good understanding of "${currentWord.word}". The structure is natural and the context is appropriate. Keep practicing!`,
-          timestamp: getCurrentTime(),
-        }
-        setMessages((prev) => [...prev, laoshiResponse])
-      } else {
-        // Fallback response
-        const laoshiResponse: Message = {
-          id: Date.now() + 1,
-          sender: 'laoshi',
-          text: `Great job! 很好！ Your sentence shows good understanding of "${currentWord.word}". The structure is natural and the context is appropriate. Keep practicing!`,
-          timestamp: getCurrentTime(),
-        }
-        setMessages((prev) => [...prev, laoshiResponse])
+      const evaluation = response.data
+      const laoshiResponse: Message = {
+        id: Date.now() + 1,
+        sender: 'laoshi',
+        text: evaluation.feedback || `Great job! 很好！ Your sentence shows good understanding of "${currentWord.word}". The structure is natural and the context is appropriate. Keep practicing!`,
+        timestamp: getCurrentTime(),
       }
-    } catch (error) {
+      setMessages((prev) => [...prev, laoshiResponse])
+    } catch {
       // Fallback response if API fails
       const laoshiResponse: Message = {
         id: Date.now() + 1,
@@ -274,13 +234,13 @@ const Practice = () => {
                 )}
 
                 {showTranslation && (
-                  <div className="text-gray-500">{currentWord.definition}</div>
+                  <div className="text-gray-500">{currentWord.meaning}</div>
                 )}
 
                 <div className="mt-6 pt-4 border-t border-gray-200/50">
                   <p className="text-xs text-gray-500 mb-2">Confidence Level</p>
                   <span className="inline-block px-4 py-1.5 bg-orange-400 text-white text-sm font-medium rounded-full">
-                    {currentWord.confidenceLevel}
+                    {currentWord.status}
                   </span>
                 </div>
               </>

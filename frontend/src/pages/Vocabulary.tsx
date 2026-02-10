@@ -1,15 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-
-interface VocabularyWord {
-  id: string
-  word: string
-  pinyin: string
-  definition: string
-  sourceName: string
-}
+import Papa from 'papaparse'
+import api from '../lib/api'
+import { Word } from '../types/api'
 
 const Vocabulary = () => {
-  const [words, setWords] = useState<VocabularyWord[]>([])
+  const [words, setWords] = useState<Word[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'pinyin' | 'word'>('pinyin')
@@ -18,6 +13,8 @@ const Vocabulary = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadWarning, setUploadWarning] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Fetch vocabulary from API
@@ -28,14 +25,8 @@ const Vocabulary = () => {
   const fetchVocabulary = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/vocabulary')
-      if (response.ok) {
-        const data = await response.json()
-        setWords(data)
-      } else {
-        console.log('API not available, using empty data')
-        setWords([])
-      }
+      const response = await api.get('/api/words')
+      setWords(response.data)
     } catch (error) {
       console.error('Error fetching vocabulary:', error)
       setWords([])
@@ -49,7 +40,7 @@ const Vocabulary = () => {
     .filter(word =>
       word.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
       word.pinyin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      word.definition.toLowerCase().includes(searchQuery.toLowerCase())
+      word.meaning.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       if (sortBy === 'pinyin') {
@@ -69,6 +60,7 @@ const Vocabulary = () => {
       return
     }
     setSelectedFile(file)
+    setUploadError(null)
   }
 
   // Handle drag and drop
@@ -99,57 +91,93 @@ const Vocabulary = () => {
     }
   }
 
-  // Handle upload
+  // Handle upload with PapaParse CSV parsing
   const handleUpload = async () => {
     if (!selectedFile || !sourceName.trim()) {
-      alert('Please select a file and enter a source name')
+      setUploadError('Please select a file and enter a source name')
       return
     }
 
     setUploading(true)
+    setUploadError(null)
+    setUploadWarning(null)
     try {
-      const formData = new FormData()
-      formData.append('file', selectedFile)
-      formData.append('sourceName', sourceName)
-
-      const response = await fetch('/api/vocabulary/import', {
-        method: 'POST',
-        body: formData,
+      // Parse CSV on the frontend
+      const parseResult = await new Promise<Papa.ParseResult<Record<string, string>>>((resolve, reject) => {
+        Papa.parse<Record<string, string>>(selectedFile, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results),
+          error: (error: Error) => reject(error),
+        })
       })
 
-      if (response.ok) {
-        const result = await response.json()
-        console.log('Import successful:', result)
-        setShowUploadModal(false)
-        setSelectedFile(null)
-        setSourceName('')
-        fetchVocabulary()
-      } else {
-        const error = await response.json()
-        alert(`Import failed: ${error.message || 'Unknown error'}`)
+      // Validate required columns (case-insensitive)
+      const headers = parseResult.meta.fields?.map(f => f.toLowerCase()) || []
+      const requiredColumns = ['word', 'pinyin', 'meaning']
+      const missingColumns = requiredColumns.filter(col => !headers.includes(col))
+
+      if (missingColumns.length > 0) {
+        setUploadError(`CSV is missing required columns: ${missingColumns.join(', ')}. Your CSV must have columns named "word", "pinyin", and "meaning".`)
+        return
       }
-    } catch (error) {
+
+      if (parseResult.data.length === 0) {
+        setUploadError('CSV file contains no data rows. Please check that your file has data below the header row.')
+        return
+      }
+
+      // Build case-insensitive field map
+      const fieldMap: Record<string, string> = {}
+      parseResult.meta.fields?.forEach(f => {
+        fieldMap[f.toLowerCase()] = f
+      })
+
+      // Map rows to backend shape and separate valid from invalid
+      const allRows = parseResult.data.map(row => ({
+        word: row[fieldMap['word']],
+        pinyin: row[fieldMap['pinyin']],
+        meaning: row[fieldMap['meaning']],
+        source_name: sourceName.trim(),
+      }))
+
+      const validRows = allRows.filter(w => w.word && w.pinyin && w.meaning)
+      const skippedCount = allRows.length - validRows.length
+
+      if (validRows.length === 0) {
+        setUploadError('All rows have empty required fields (word, pinyin, or meaning). Please check your CSV.')
+        return
+      }
+
+      // Send valid rows to backend
+      await api.post('/api/words', validRows)
+
+      if (skippedCount > 0) {
+        setUploadWarning(`${skippedCount} row(s) were excluded due to missing data (word, pinyin, or meaning).`)
+      }
+      setShowUploadModal(false)
+      setSelectedFile(null)
+      setSourceName('')
+      setUploadError(null)
+      fetchVocabulary()
+      // uploadWarning is intentionally kept — it displays outside the modal
+    } catch (error: unknown) {
       console.error('Error uploading file:', error)
-      alert('Failed to upload file. Please try again.')
+      const axiosError = error as { response?: { data?: { error?: string } } }
+      const message = axiosError.response?.data?.error || 'Failed to upload file. Please try again.'
+      setUploadError(`Import failed: ${message}`)
     } finally {
       setUploading(false)
     }
   }
 
   // Handle delete word
-  const handleDelete = async (wordId: string) => {
+  const handleDelete = async (wordId: number) => {
     if (!confirm('Are you sure you want to delete this word?')) return
 
     try {
-      const response = await fetch(`/api/vocabulary/${wordId}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        setWords(words.filter(w => w.id !== wordId))
-      } else {
-        alert('Failed to delete word')
-      }
+      await api.delete(`/api/words/${wordId}`)
+      setWords(words.filter(w => w.id !== wordId))
     } catch (error) {
       console.error('Error deleting word:', error)
       alert('Failed to delete word')
@@ -157,7 +185,7 @@ const Vocabulary = () => {
   }
 
   // Handle edit word (placeholder - could open a modal)
-  const handleEdit = (wordId: string) => {
+  const handleEdit = (wordId: number) => {
     console.log('Edit word:', wordId)
     // TODO: Implement edit modal
   }
@@ -168,7 +196,7 @@ const Vocabulary = () => {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Vocabulary</h1>
         <button
-          onClick={() => setShowUploadModal(true)}
+          onClick={() => { setShowUploadModal(true); setUploadWarning(null) }}
           className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-5 rounded-full transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,6 +205,18 @@ const Vocabulary = () => {
           Import from file
         </button>
       </div>
+
+      {/* Upload Warning Banner */}
+      {uploadWarning && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-sm text-amber-700">{uploadWarning}</p>
+          <button onClick={() => setUploadWarning(null)} className="text-amber-400 hover:text-amber-600 ml-3">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Main Content Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -240,8 +280,8 @@ const Vocabulary = () => {
                       <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
                       <td className="px-4 py-3 text-base font-medium text-gray-900">{word.word}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{word.pinyin}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{word.definition}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{word.sourceName}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{word.meaning}</td>
+                      <td className="px-4 py-3 text-sm text-gray-500">{word.source_name}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <button
@@ -291,6 +331,7 @@ const Vocabulary = () => {
                     setShowUploadModal(false)
                     setSelectedFile(null)
                     setSourceName('')
+                    setUploadError(null)
                   }}
                   className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -299,7 +340,7 @@ const Vocabulary = () => {
                   </svg>
                 </button>
               </div>
-              <p className="text-sm text-gray-500">Only .csv files are accepted</p>
+              <p className="text-sm text-gray-500">Only .csv files are accepted. Required columns: word, pinyin, meaning</p>
             </div>
 
             {/* Upload Area */}
@@ -370,6 +411,15 @@ const Vocabulary = () => {
               />
             </div>
 
+            {/* Error Message */}
+            {uploadError && (
+              <div className="px-6 pb-2">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-sm text-red-700">{uploadError}</p>
+                </div>
+              </div>
+            )}
+
             {/* Modal Footer */}
             <div className="px-6 pb-6 flex items-center justify-end gap-3">
               <button
@@ -377,6 +427,7 @@ const Vocabulary = () => {
                   setShowUploadModal(false)
                   setSelectedFile(null)
                   setSourceName('')
+                  setUploadError(null)
                 }}
                 className="px-5 py-2.5 text-gray-700 font-medium border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
               >
@@ -385,9 +436,15 @@ const Vocabulary = () => {
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || !sourceName.trim() || uploading}
-                className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
               >
-                {uploading ? 'Uploading...' : 'Attach File'}
+                {uploading && (
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {uploading ? 'Processing...' : 'Attach File'}
               </button>
             </div>
           </div>

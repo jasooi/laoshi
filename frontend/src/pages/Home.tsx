@@ -1,36 +1,27 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import api from '../lib/api'
 
 const Home = () => {
   const [totalWords, setTotalWords] = useState(0)
-  const [wordsToday, setWordsToday] = useState(0)
-  const [masteryProgress, setMasteryProgress] = useState(0)
+  const [wordsToday] = useState(0)
+  const [masteryProgress] = useState(0)
   const [wordsWaiting, setWordsWaiting] = useState(0)
-  const [loading, setLoading] = useState(true)
 
-  // Fetch stats from API
+  // Fetch stats from API — only if user is authenticated
   useEffect(() => {
+    const token = localStorage.getItem('access_token')
+    if (!token) return
+
     const fetchStats = async () => {
       try {
-        // Fetch vocabulary count
-        const vocabResponse = await fetch('/api/vocabulary')
-        if (vocabResponse.ok) {
-          const vocabData = await vocabResponse.json()
-          setTotalWords(vocabData.length || 0)
-          setWordsWaiting(vocabData.length || 0) // For now, all words are waiting
-        }
-
-        // Fetch progress stats
-        const progressResponse = await fetch('/api/progress/stats')
-        if (progressResponse.ok) {
-          const progressData = await progressResponse.json()
-          setWordsToday(progressData.wordsToday || 0)
-          setMasteryProgress(progressData.masteryProgress || 0)
-        }
-      } catch (error) {
-        console.error('Error fetching stats:', error)
-      } finally {
-        setLoading(false)
+        const vocabResponse = await api.get('/api/words')
+        const vocabData = vocabResponse.data
+        setTotalWords(Array.isArray(vocabData) ? vocabData.length : 0)
+        setWordsWaiting(Array.isArray(vocabData) ? vocabData.length : 0)
+      } catch {
+        // 404 = no words yet (expected for new users), 401 = not authenticated
+        // Both are fine — defaults are already 0
       }
     }
 

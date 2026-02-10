@@ -16,6 +16,7 @@ class Word(db.Model):
     pinyin = db.Column(db.String(150), nullable=False)
     meaning = db.Column(db.String(300), nullable=False)
     confidence_score = db.Column(db.Float, nullable=False, default=0.5)
+    source_name = db.Column(db.String(200), nullable=True, default=None)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     user = db.relationship('User', back_populates='words')
@@ -39,15 +40,25 @@ class Word(db.Model):
     def __repr__(self):
         return f"{self.id} - {self.word} - {self.pinyin} - {self.meaning}"
 
-    def format_data(self):
+    def format_data(self, viewer=None):
+        # If no viewer or viewer is not the owner, return None (access denied at model level)
+        if viewer is None or viewer.id != self.user_id:
+            return None
         return {
             'id': self.id,
             'word': self.word,
             'pinyin': self.pinyin,
             'meaning': self.meaning,
             'confidence_score': self.confidence_score,
-            'status': self.status
+            'status': self.status,
+            'source_name': self.source_name,
         }
+
+    def is_owner(self, viewer) -> bool:
+        """Check if viewer is the owner of this word"""
+        if viewer is None:
+            return False
+        return viewer.id == self.user_id
     
 
     def update_confidence_score(self, new_value: float):
@@ -92,9 +103,10 @@ class Word(db.Model):
             raise
 
     @classmethod
-    def delete_all(cls):
+    def delete_all(cls, viewer):
+        # delete all words for the logged in user
         try:
-            db.session.query(Word).delete(synchronize_session=False)
+            db.session.query(Word).filter(user_id=viewer.id).delete(synchronize_session=False)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -102,12 +114,10 @@ class Word(db.Model):
     
 
     @classmethod
-    def get_full_list(cls, user_filter=None):
-        # Returns a list of Word objects
-        if user_filter:
-            return cls.query.filter_by(user_id=user_filter).all()
-        else:
-            return cls.query.all()
+    def get_full_list(cls, viewer):
+        # Returns a list of Word objects for a user
+        return cls.query.filter_by(user_id=viewer.id).all()
+
     
     @classmethod
     def get_by_id(cls, id: int):
@@ -133,6 +143,7 @@ class User(db.Model):
     password = db.Column(db.String(200))
     preferred_name = db.Column(db.String(80))
     created_ds = db.Column(db.DateTime)
+    is_admin = db.Column(db.Boolean, default=False)
 
     words = db.relationship('Word', back_populates='user')
     sessions = db.relationship('UserSession', back_populates='user')
@@ -140,14 +151,23 @@ class User(db.Model):
     def __repr__(self):
         return f"{self.id} - {self.preferred_name}"
     
-    def format_data(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'preferred_name': self.preferred_name
-        }
-    
-    # TODO: define method to retrieve password hash for a user?
+    def format_data(self, viewer=None):
+        # viewer should be the User object of the logged in user
+        if viewer is None:
+            return {
+                'id': self.id
+            } 
+
+        if viewer.id == self.id or viewer.is_admin == True:
+                return {
+                    'id': self.id,
+                    'username': self.username,
+                    'preferred_name': self.preferred_name
+                }
+        else:
+            return {
+                'id': self.id
+            } 
 
     def add(self):
         try:
@@ -173,6 +193,11 @@ class User(db.Model):
     def get_by_id(cls, id: int):
         # Returns a User object
         return cls.query.filter_by(id = id).first()
+    
+    @classmethod
+    def get_by_username(cls, username: str):
+        # Returns a User object
+        return cls.query.filter_by(username = username).first()
 
     @classmethod
     def exists(cls, id: int) -> bool:
@@ -223,13 +248,31 @@ class UserSession(db.Model):
     def __repr__(self):
         return f"session {self.id} of user {self.user.preferred_name}"
     
-    def format_data(self):
+    def format_data(self, viewer=None):
+        # If no viewer, return None (access denied at model level)
+        # Only owner or admin can see session data
+        if viewer is None:
+            return None
+        if viewer.id != self.user_id and not viewer.is_admin:
+            return None
         return {
             'id': self.id,
             'session_start_ds': self.session_start_ds,
             'session_end_ds': self.session_end_ds,
             'user_id': self.user_id
         }
+
+    def is_owner(self, viewer) -> bool:
+        """Check if viewer is the owner of this session"""
+        if viewer is None:
+            return False
+        return viewer.id == self.user_id
+
+    def can_view(self, viewer) -> bool:
+        """Check if viewer can view this session (owner or admin)"""
+        if viewer is None:
+            return False
+        return viewer.id == self.user_id or viewer.is_admin
     
     def is_new_session_end_valid(self, new_session_end: datetime):
         # Only allow session end ds to be updated if it is after start ds or previous end ds (in the case of reopening of session)
@@ -296,13 +339,31 @@ class SessionWord(db.Model):
     def __repr__(self):
         return f"word {self.word_id} in session {self.session_id}"
     
-    def format_data(self):
+    def format_data(self, viewer=None):
+        # Access control based on session ownership
+        # SessionWord inherits access from its parent session
+        if viewer is None:
+            return None
+        if not self.user_session.can_view(viewer):
+            return None
         id_string = str(self.word_id) + '_' + str(self.session_id)
         return {
             'id': id_string,
             'is_skipped': self.is_skipped,
             'session_notes': self.session_notes
         }
+
+    def is_owner(self, viewer) -> bool:
+        """Check if viewer is the owner of this session word (via session ownership)"""
+        if viewer is None:
+            return False
+        return self.user_session.is_owner(viewer)
+
+    def can_view(self, viewer) -> bool:
+        """Check if viewer can view this session word (owner or admin)"""
+        if viewer is None:
+            return False
+        return self.user_session.can_view(viewer)
 
     def add(self):
         try:
