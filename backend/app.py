@@ -4,6 +4,7 @@
 from flask import Flask
 from flask_restful import Api
 from flask_migrate import Migrate
+from flask_cors import CORS
 
 # Import from other files
 from extensions import db, jwt
@@ -15,6 +16,7 @@ def register_extensions(app):
     db.init_app(app)
     migrate = Migrate(app, db)
     jwt.init_app(app)
+    CORS(app)
     
 
 def register_resources(app):

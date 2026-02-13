@@ -21,7 +21,7 @@ class WordListResource(Resource):
             return {"error": str(e)}, 500
 
         if not words_list:
-            return {'error': 'no words found'}, HTTPStatus.NOT_FOUND
+            return [], 200
 
         words_list_json = [w.format_data(vc_user) for w in words_list]
         return words_list_json, 200

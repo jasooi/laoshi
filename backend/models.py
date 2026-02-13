@@ -106,7 +106,7 @@ class Word(db.Model):
     def delete_all(cls, viewer):
         # delete all words for the logged in user
         try:
-            db.session.query(Word).filter(user_id=viewer.id).delete(synchronize_session=False)
+            db.session.query(Word).filter_by(user_id=viewer.id).delete(synchronize_session=False)
             db.session.commit()
         except Exception:
             db.session.rollback()

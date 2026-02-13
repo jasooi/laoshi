@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
 import { Word } from '../types/api'
@@ -74,7 +74,10 @@ const Practice = () => {
     }
   }
 
+  const initializedRef = useRef(false)
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
     fetchNextWord()
   }, [])
 
@@ -124,11 +127,6 @@ const Practice = () => {
     // Add to practiced words
     setPracticedWords((prev) => [...prev, currentWord])
     setInputText('')
-
-    // Fetch next word after a short delay
-    setTimeout(() => {
-      fetchNextWord()
-    }, 1500)
   }
 
   const handleSkip = () => {

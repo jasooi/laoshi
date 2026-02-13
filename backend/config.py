@@ -11,6 +11,7 @@ class Config():
 
     # JWT configs
     SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
     JWT_ERROR_MESSAGE_KEY = 'message'
 
     # Flask configs

@@ -49,12 +49,12 @@ This phase modifies the backend only. No frontend changes.
    ```
 
 **Acceptance criteria**:
-- [ ] `GET http://localhost:5000/api/` returns the HomeResource response (string: "You have successfully called this API. Congrats!")
-- [ ] `GET http://localhost:5000/words` returns 404 (old path no longer works)
-- [ ] `GET http://localhost:5000/api/words` returns 401 (JWT required, no token provided) -- this confirms the route exists
-- [ ] `POST http://localhost:5000/api/token` with valid credentials returns `{ "access_token": "..." }`
-- [ ] `create_app()` still works with no arguments (default to `Config`)
-- [ ] `create_app(config_class=SomeConfig)` uses the provided config
+- [x] `GET http://localhost:5000/api/` returns the HomeResource response (string: "You have successfully called this API. Congrats!")
+- [x] `GET http://localhost:5000/words` returns 404 (old path no longer works)
+- [x] `GET http://localhost:5000/api/words` returns 401 (JWT required, no token provided) -- this confirms the route exists
+- [x] `POST http://localhost:5000/api/token` with valid credentials returns `{ "access_token": "..." }`
+- [x] `create_app()` still works with no arguments (default to `Config`)
+- [x] `create_app(config_class=SomeConfig)` uses the provided config
 
 **Dependencies**: None
 
@@ -93,9 +93,9 @@ This phase modifies the backend only. No frontend changes.
    ```
 
 **Acceptance criteria**:
-- [ ] The `Word` model has a `source_name` attribute.
-- [ ] `format_data()` returns a dict that includes the key `source_name`.
-- [ ] Existing `Word` instances (with no `source_name` set) return `source_name: None` in `format_data()`.
+- [x] The `Word` model has a `source_name` attribute.
+- [x] `format_data()` returns a dict that includes the key `source_name`.
+- [x] Existing `Word` instances (with no `source_name` set) return `source_name: None` in `format_data()`.
 
 **Dependencies**: None (can be done in parallel with T-001)
 
@@ -116,9 +116,9 @@ This phase modifies the backend only. No frontend changes.
 3. Apply: `flask db upgrade`
 
 **Acceptance criteria**:
-- [ ] The `word` table in PostgreSQL has a `source_name` column.
-- [ ] Existing rows have `source_name = NULL`.
-- [ ] The migration is reversible (`flask db downgrade` removes the column).
+- [x] The `word` table in PostgreSQL has a `source_name` column.
+- [x] Existing rows have `source_name = NULL`.
+- [x] The migration is reversible (`flask db downgrade` removes the column).
 
 **Dependencies**: T-002
 
@@ -152,9 +152,9 @@ This phase modifies the backend only. No frontend changes.
    ```
 
 **Acceptance criteria**:
-- [ ] `POST /api/words` with a JSON body `[{"word": "...", "pinyin": "...", "meaning": "...", "source_name": "My CSV"}]` creates a word with `source_name = "My CSV"`.
-- [ ] `POST /api/words` with a JSON body `[{"word": "...", "pinyin": "...", "meaning": "..."}]` (no `source_name`) creates a word with `source_name = None`.
-- [ ] `PUT /api/words/<id>` with `{"source_name": "Updated"}` updates the word's `source_name`.
+- [x] `POST /api/words` with a JSON body `[{"word": "...", "pinyin": "...", "meaning": "...", "source_name": "My CSV"}]` creates a word with `source_name = "My CSV"`.
+- [x] `POST /api/words` with a JSON body `[{"word": "...", "pinyin": "...", "meaning": "..."}]` (no `source_name`) creates a word with `source_name = None`.
+- [x] `PUT /api/words/<id>` with `{"source_name": "Updated"}` updates the word's `source_name`.
 
 **Dependencies**: T-001, T-002, T-003
 
@@ -197,11 +197,11 @@ export default api
 ```
 
 **Acceptance criteria**:
-- [ ] File exists at `frontend/src/lib/api.ts`.
-- [ ] Exports a default Axios instance.
-- [ ] When `localStorage` has `access_token`, the interceptor adds `Authorization: Bearer <token>` to requests.
-- [ ] When `localStorage` has no `access_token`, no `Authorization` header is added.
-- [ ] TypeScript compiles without errors.
+- [x] File exists at `frontend/src/lib/api.ts`.
+- [x] Exports a default Axios instance.
+- [x] When `localStorage` has `access_token`, the interceptor adds `Authorization: Bearer <token>` to requests.
+- [x] When `localStorage` has no `access_token`, no `Authorization` header is added.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: None (Axios is already in `package.json`)
 
@@ -225,12 +225,12 @@ Key behaviors:
 - Export `useAuth()` hook.
 
 **Acceptance criteria**:
-- [ ] `AuthProvider` is a valid React component that wraps children.
-- [ ] `useAuth()` returns `{ token, user, isAuthenticated, isLoading, login, logout }`.
-- [ ] After `login()`, `localStorage` contains `access_token`.
-- [ ] After `logout()`, `localStorage` does not contain `access_token`.
-- [ ] If `localStorage` has a stale/invalid token on mount, it is cleared.
-- [ ] TypeScript compiles without errors.
+- [x] `AuthProvider` is a valid React component that wraps children.
+- [x] `useAuth()` returns `{ token, user, isAuthenticated, isLoading, login, logout }`.
+- [x] After `login()`, `localStorage` contains `access_token`.
+- [x] After `logout()`, `localStorage` does not contain `access_token`.
+- [x] If `localStorage` has a stale/invalid token on mount, it is cleared.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-005
 
@@ -263,9 +263,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 ```
 
 **Acceptance criteria**:
-- [ ] The app starts without errors (`npm run dev`).
-- [ ] React DevTools shows `AuthProvider` in the component tree wrapping `App`.
-- [ ] `useAuth()` is callable from any component within the app tree.
+- [x] The app starts without errors (`npm run dev`).
+- [x] React DevTools shows `AuthProvider` in the component tree wrapping `App`.
+- [x] `useAuth()` is callable from any component within the app tree.
 
 **Dependencies**: T-006
 
@@ -313,10 +313,10 @@ export interface SessionWord {
 ```
 
 **Acceptance criteria**:
-- [ ] File exists at `frontend/src/types/api.ts`.
-- [ ] All four interfaces are exported.
-- [ ] `Word` interface matches `Word.format_data()` output exactly (including `source_name`).
-- [ ] TypeScript compiles without errors.
+- [x] File exists at `frontend/src/types/api.ts`.
+- [x] All four interfaces are exported.
+- [x] `Word` interface matches `Word.format_data()` output exactly (including `source_name`).
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: None (can be done in parallel with T-005, T-006)
 
@@ -339,9 +339,9 @@ npm install -D @types/papaparse
 ```
 
 **Acceptance criteria**:
-- [ ] `papaparse` appears in `dependencies` in `package.json`.
-- [ ] `@types/papaparse` appears in `devDependencies` in `package.json`.
-- [ ] `import Papa from 'papaparse'` compiles without TypeScript errors.
+- [x] `papaparse` appears in `dependencies` in `package.json`.
+- [x] `@types/papaparse` appears in `devDependencies` in `package.json`.
+- [x] `import Papa from 'papaparse'` compiles without TypeScript errors.
 
 **Dependencies**: None
 
@@ -372,11 +372,11 @@ This phase updates each page component to use the new infrastructure.
    - `handleEdit(wordId: string)` -> `handleEdit(wordId: number)`
 
 **Acceptance criteria**:
-- [ ] No `VocabularyWord` interface exists in the file.
-- [ ] `Word` is imported from `../types/api`.
-- [ ] All state types use `Word`.
-- [ ] `handleDelete` and `handleEdit` accept `number` parameter.
-- [ ] TypeScript compiles without errors.
+- [x] No `VocabularyWord` interface exists in the file.
+- [x] `Word` is imported from `../types/api`.
+- [x] All state types use `Word`.
+- [x] `handleDelete` and `handleEdit` accept `number` parameter.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-008
 
@@ -400,10 +400,10 @@ This phase updates each page component to use the new infrastructure.
    - `{word.sourceName}` -> `{word.source_name}`
 
 **Acceptance criteria**:
-- [ ] No references to `definition` or `sourceName` remain in the file.
-- [ ] The search filter works on the `meaning` field.
-- [ ] The table displays `meaning` and `source_name` in the correct columns.
-- [ ] TypeScript compiles without errors.
+- [x] No references to `definition` or `sourceName` remain in the file.
+- [x] The search filter works on the `meaning` field.
+- [x] The table displays `meaning` and `source_name` in the correct columns.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-010
 
@@ -454,12 +454,12 @@ This phase updates each page component to use the new infrastructure.
    ```
 
 **Acceptance criteria**:
-- [ ] No `fetch()` calls remain in the file (except `handleUpload` which is done in T-013).
-- [ ] `fetchVocabulary` calls `api.get('/api/words')`.
-- [ ] `handleDelete` calls `api.delete('/api/words/${wordId}')`.
-- [ ] Auth header is automatically attached by the Axios interceptor.
-- [ ] Error handling uses try/catch (Axios pattern), not `response.ok` (fetch pattern).
-- [ ] TypeScript compiles without errors.
+- [x] No `fetch()` calls remain in the file (except `handleUpload` which is done in T-013).
+- [x] `fetchVocabulary` calls `api.get('/api/words')`.
+- [x] `handleDelete` calls `api.delete('/api/words/${wordId}')`.
+- [x] Auth header is automatically attached by the Axios interceptor.
+- [x] Error handling uses try/catch (Axios pattern), not `response.ok` (fetch pattern).
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-005, T-010
 
@@ -488,16 +488,16 @@ This phase updates each page component to use the new infrastructure.
    - On failure: show error message from backend or generic error.
 
 **Acceptance criteria**:
-- [ ] No `FormData` usage remains in the file.
-- [ ] CSV is parsed client-side using PapaParse.
-- [ ] Required columns are validated before API call.
-- [ ] Empty CSV shows an error message.
-- [ ] CSV with wrong column names shows an error listing missing columns.
-- [ ] Valid CSV with correct columns sends JSON POST to `/api/words`.
-- [ ] `source_name` from the input field is attached to every word.
-- [ ] On success, modal closes and table refreshes.
-- [ ] On failure, error message is shown.
-- [ ] TypeScript compiles without errors.
+- [x] No `FormData` usage remains in the file.
+- [x] CSV is parsed client-side using PapaParse.
+- [x] Required columns are validated before API call.
+- [x] Empty CSV shows an error message.
+- [x] CSV with wrong column names shows an error listing missing columns.
+- [x] Valid CSV with correct columns sends JSON POST to `/api/words`.
+- [x] `source_name` from the input field is attached to every word.
+- [x] On success, modal closes and table refreshes.
+- [x] On failure, error message is shown.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-009, T-012
 
@@ -544,13 +544,13 @@ This phase updates each page component to use the new infrastructure.
    Note: The two API calls are in separate try/catch blocks so a failure in one does not prevent the other from running.
 
 **Acceptance criteria**:
-- [ ] No `fetch()` calls remain in the file.
-- [ ] Vocabulary data is fetched from `/api/words`.
-- [ ] `totalWords` and `wordsWaiting` reflect the actual word count from the backend.
-- [ ] The `/api/progress/stats` call fails silently (endpoint does not exist yet), leaving `wordsToday` and `masteryProgress` at 0.
-- [ ] Auth header is automatically attached.
-- [ ] The page renders without errors or crashes.
-- [ ] TypeScript compiles without errors.
+- [x] No `fetch()` calls remain in the file.
+- [x] Vocabulary data is fetched from `/api/words`.
+- [x] `totalWords` and `wordsWaiting` reflect the actual word count from the backend.
+- [x] The `/api/progress/stats` call fails silently (endpoint does not exist yet), leaving `wordsToday` and `masteryProgress` at 0.
+- [x] Auth header is automatically attached.
+- [x] The page renders without errors or crashes.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-005
 
@@ -586,11 +586,11 @@ This phase updates each page component to use the new infrastructure.
    There are three mock word instances in the file (the fallback mock in the `if (!response.ok)` branch and two in catch blocks). All three must be updated.
 
 **Acceptance criteria**:
-- [ ] No `VocabularyWord` interface exists in the file.
-- [ ] `Word` is imported from `../types/api`.
-- [ ] All state types use `Word`.
-- [ ] All mock word objects use `Word` field names (`meaning`, `status`, `confidence_score`, `source_name`).
-- [ ] TypeScript compiles without errors.
+- [x] No `VocabularyWord` interface exists in the file.
+- [x] `Word` is imported from `../types/api`.
+- [x] All state types use `Word`.
+- [x] All mock word objects use `Word` field names (`meaning`, `status`, `confidence_score`, `source_name`).
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-008
 
@@ -610,10 +610,10 @@ This phase updates each page component to use the new infrastructure.
 2. Line ~283 (confidence badge): `{currentWord.confidenceLevel}` -> `{currentWord.status}`
 
 **Acceptance criteria**:
-- [ ] No references to `definition` or `confidenceLevel` remain in the file.
-- [ ] The translation toggle shows `currentWord.meaning`.
-- [ ] The confidence badge shows `currentWord.status`.
-- [ ] TypeScript compiles without errors.
+- [x] No references to `definition` or `confidenceLevel` remain in the file.
+- [x] The translation toggle shows `currentWord.meaning`.
+- [x] The confidence badge shows `currentWord.status`.
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-015
 
@@ -658,12 +658,12 @@ This phase updates each page component to use the new infrastructure.
 3. Rewrite `handleSubmit()` similarly -- the `fetch('/api/practice/evaluate', ...)` call becomes `api.post('/api/practice/evaluate', { wordId: currentWord.id, sentence: inputText })`. The catch block provides a fallback response message.
 
 **Acceptance criteria**:
-- [ ] No `fetch()` calls remain in the file.
-- [ ] All API calls use the centralized `api` instance.
-- [ ] Auth header is automatically attached.
-- [ ] The page renders with mock data when the backend endpoints are not available (expected for M0).
-- [ ] No errors or crashes in the console (just a `console.log` for the fallback).
-- [ ] TypeScript compiles without errors.
+- [x] No `fetch()` calls remain in the file.
+- [x] All API calls use the centralized `api` instance.
+- [x] Auth header is automatically attached.
+- [x] The page renders with mock data when the backend endpoints are not available (expected for M0).
+- [x] No errors or crashes in the console (just a `console.log` for the fallback).
+- [x] TypeScript compiles without errors.
 
 **Dependencies**: T-005, T-015
 
@@ -689,7 +689,7 @@ npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
 ```
 
 **Acceptance criteria**:
-- [ ] `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` appear in `devDependencies`.
+- [x] `vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom` appear in `devDependencies`.
 
 **Dependencies**: None
 
@@ -744,9 +744,9 @@ import '@testing-library/jest-dom'
 ```
 
 **Acceptance criteria**:
-- [ ] `vite.config.ts` has a `test` block with `environment: 'jsdom'`.
-- [ ] `frontend/src/test/setup.ts` exists and imports `@testing-library/jest-dom`.
-- [ ] Running `npx vitest --run` (with no test files yet) exits cleanly with "no tests found" or similar.
+- [x] `vite.config.ts` has a `test` block with `environment: 'jsdom'`.
+- [x] `frontend/src/test/setup.ts` exists and imports `@testing-library/jest-dom`.
+- [x] Running `npx vitest --run` (with no test files yet) exits cleanly with "no tests found" or similar.
 
 **Dependencies**: T-018
 
@@ -767,8 +767,8 @@ import '@testing-library/jest-dom'
 ```
 
 **Acceptance criteria**:
-- [ ] `npm test` starts Vitest in watch mode.
-- [ ] `npm test -- --run` runs tests and exits.
+- [x] `npm test` starts Vitest in watch mode.
+- [x] `npm test -- --run` runs tests and exits.
 
 **Dependencies**: T-019
 
@@ -788,10 +788,10 @@ import '@testing-library/jest-dom'
 2. Add `"types": ["vitest/globals"]` to `compilerOptions` to support Vitest globals (`describe`, `it`, `expect`) without explicit imports.
 
 **Acceptance criteria**:
-- [ ] `tsconfig.json` `include` contains `"frontend/src"`.
-- [ ] `compilerOptions.types` contains `"vitest/globals"`.
-- [ ] `npm run dev` still works (Vite dev server starts without TypeScript errors).
-- [ ] TypeScript recognizes `describe`, `it`, `expect` in test files without imports.
+- [x] `tsconfig.json` `include` contains `"frontend/src"`.
+- [x] `compilerOptions.types` contains `"vitest/globals"`.
+- [x] `npm run dev` still works (Vite dev server starts without TypeScript errors).
+- [x] TypeScript recognizes `describe`, `it`, `expect` in test files without imports.
 
 **Dependencies**: T-018
 
@@ -822,9 +822,9 @@ describe('App', () => {
 Note: `<App />` uses `<BrowserRouter>` internally, so no extra router wrapper is needed. The default route `/` renders `<Welcome />` which contains the text "Welcome to the classroom".
 
 **Acceptance criteria**:
-- [ ] `npm test -- --run` passes with 1 test passing.
-- [ ] The test renders `<App />` and finds the expected text.
-- [ ] No console errors during the test run.
+- [x] `npm test -- --run` passes with 1 test passing.
+- [x] The test renders `<App />` and finds the expected text.
+- [x] No console errors during the test run.
 
 **Dependencies**: T-019, T-020, T-021
 
@@ -852,8 +852,8 @@ pytest>=7.0.0
 **Steps**: Install via `pip install -r requirements.txt` (from the `backend/` directory).
 
 **Acceptance criteria**:
-- [ ] `pytest` appears in `backend/requirements.txt`.
-- [ ] `python -m pytest --version` runs successfully in the backend virtual environment.
+- [x] `pytest` appears in `backend/requirements.txt`.
+- [x] `python -m pytest --version` runs successfully in the backend virtual environment.
 
 **Dependencies**: None
 
@@ -878,10 +878,10 @@ class TestConfig(Config):
 ```
 
 **Acceptance criteria**:
-- [ ] `TestConfig` exists in `backend/config.py`.
-- [ ] `TestConfig.SQLALCHEMY_DATABASE_URI` is `'sqlite:///:memory:'`.
-- [ ] `TestConfig.TESTING` is `True`.
-- [ ] `TestConfig` inherits from `Config` (gets other defaults).
+- [x] `TestConfig` exists in `backend/config.py`.
+- [x] `TestConfig.SQLALCHEMY_DATABASE_URI` is `'sqlite:///:memory:'`.
+- [x] `TestConfig.TESTING` is `True`.
+- [x] `TestConfig` inherits from `Config` (gets other defaults).
 
 **Dependencies**: None
 
@@ -934,9 +934,9 @@ def client(app, db):
 ```
 
 **Acceptance criteria**:
-- [ ] `backend/tests/__init__.py` exists (can be empty).
-- [ ] `backend/tests/conftest.py` exists with `app`, `db`, and `client` fixtures.
-- [ ] Running `python -m pytest tests/` from the `backend/` directory discovers the conftest without import errors.
+- [x] `backend/tests/__init__.py` exists (can be empty).
+- [x] `backend/tests/conftest.py` exists with `app`, `db`, and `client` fixtures.
+- [x] Running `python -m pytest tests/` from the `backend/` directory discovers the conftest without import errors.
 
 **Dependencies**: T-001 (for `create_app(config_class=...)` parameter), T-023, T-024
 
@@ -966,10 +966,10 @@ def test_words_requires_auth(client):
 ```
 
 **Acceptance criteria**:
-- [ ] Running `python -m pytest tests/` from `backend/` passes with 2 tests.
-- [ ] `test_health_check` confirms `GET /api/` returns 200.
-- [ ] `test_words_requires_auth` confirms `GET /api/words` without a token returns 401.
-- [ ] Tests run against SQLite in-memory (no PostgreSQL required).
+- [x] Running `python -m pytest tests/` from `backend/` passes with 2 tests.
+- [x] `test_health_check` confirms `GET /api/` returns 200.
+- [x] `test_words_requires_auth` confirms `GET /api/words` without a token returns 401.
+- [x] Tests run against SQLite in-memory (no PostgreSQL required).
 
 **Dependencies**: T-025
 
@@ -1040,15 +1040,15 @@ def test_words_requires_auth(client):
    - From `backend/`: `python -m pytest tests/ -v` (backend smoke tests pass).
 
 **Acceptance criteria**:
-- [ ] Vocabulary page loads words from the real backend.
-- [ ] CSV import creates words with correct `source_name`.
-- [ ] Word deletion works.
-- [ ] Home page shows correct total word count.
-- [ ] Practice page renders without field-name errors.
-- [ ] Auth token persists across page navigations.
-- [ ] Auth token absence is handled gracefully.
-- [ ] All frontend tests pass (`npm test -- --run`).
-- [ ] All backend tests pass (`python -m pytest tests/`).
+- [x] Vocabulary page loads words from the real backend.
+- [x] CSV import creates words with correct `source_name`.
+- [x] Word deletion works.
+- [x] Home page shows correct total word count.
+- [x] Practice page renders without field-name errors.
+- [x] Auth token persists across page navigations.
+- [x] Auth token absence is handled gracefully.
+- [x] All frontend tests pass (`npm test -- --run`).
+- [x] All backend tests pass (`python -m pytest tests/`).
 
 **Dependencies**: All previous tasks (T-001 through T-026).
 

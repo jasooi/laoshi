@@ -53,19 +53,19 @@ PRD.md (what to build & why)
 ## Phase 1 -- MVP
 
 ### Milestone 0: Foundation Fixes
-**Status:** Not Started
+**Status:** Done
 **Spec folder:** `.claudedocs/m0-foundation-fixes/`
 
 Resolve structural issues blocking all other milestones: API path mismatches between frontend and backend, missing auth headers on frontend requests, and absence of test infrastructure.
 
 | # | Task | Status |
 |---|---|---|
-| 0.1 | Resolve API path mismatch: frontend calls `/api/vocabulary/*`, `/api/practice/*`, `/api/progress/*` but backend serves `/words/*`, `/sessions/*`, etc. Decide approach (add `/api` prefix to Flask routes, or adjust Vite proxy/frontend paths) and implement consistently. | [ ] |
-| 0.2 | Add JWT Authorization header to all frontend API calls (currently no auth header is sent) | [ ] |
-| 0.3 | Create React auth context/provider to store JWT token and user state, provide login/logout functions | [ ] |
-| 0.4 | Set up frontend test infrastructure (Vitest + React Testing Library) with at least one smoke test | [ ] |
-| 0.5 | Set up backend test infrastructure (pytest + Flask test client) with at least one smoke test | [ ] |
-| 0.6 | Align frontend TypeScript interfaces with backend response shapes (e.g. backend returns `meaning`, frontend expects `definition`; backend returns computed `status`, frontend expects `confidenceLevel`) | [ ] |
+| 0.1 | Resolve API path mismatch: frontend calls `/api/vocabulary/*`, `/api/practice/*`, `/api/progress/*` but backend serves `/words/*`, `/sessions/*`, etc. Decide approach (add `/api` prefix to Flask routes, or adjust Vite proxy/frontend paths) and implement consistently. | [x] |
+| 0.2 | Add JWT Authorization header to all frontend API calls (currently no auth header is sent) | [x] |
+| 0.3 | Create React auth context/provider to store JWT token and user state, provide login/logout functions | [x] |
+| 0.4 | Set up frontend test infrastructure (Vitest + React Testing Library) with at least one smoke test | [x] |
+| 0.5 | Set up backend test infrastructure (pytest + Flask test client) with at least one smoke test | [x] |
+| 0.6 | Align frontend TypeScript interfaces with backend response shapes (e.g. backend returns `meaning`, frontend expects `definition`; backend returns computed `status`, frontend expects `confidenceLevel`) | [x] |
 
 ---
 
@@ -101,12 +101,12 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 | 2.4 | Backend: PUT `/words/<id>` -- update word fields | [x] |
 | 2.5 | Backend: DELETE `/words/<id>` -- delete single word | [x] |
 | 2.6 | Backend: DELETE `/words` -- delete all words for user | [x] |
-| 2.7 | Backend: POST CSV import endpoint -- accept multipart file upload, parse CSV, create words in bulk | [ ] |
+| 2.7 | Backend: POST CSV import endpoint -- accept multipart file upload, parse CSV, create words in bulk | N/A (CSV parsing moved client-side in M0; frontend sends JSON to POST `/api/words`) |
 | 2.8 | Frontend: Vocabulary table with search and sort | [x] |
-| 2.9 | Frontend: CSV upload modal (UI exists, needs to call correct backend endpoint once 2.7 is done) | [~] |
+| 2.9 | Frontend: CSV upload modal with client-side PapaParse parsing, sends JSON to POST `/api/words` | [x] |
 | 2.10 | Frontend: Edit word modal (handleEdit is a stub with TODO comment) | [ ] |
-| 2.11 | Frontend: Delete word (UI exists but calls wrong API path -- fix after M0) | [~] |
-| 2.12 | Frontend: Wire vocabulary fetch to backend with correct auth headers (depends on M0 + M1) | [ ] |
+| 2.11 | Frontend: Delete word via DELETE `/api/words/<id>` | [x] |
+| 2.12 | Frontend: Wire vocabulary fetch to backend with correct auth headers (via centralized Axios instance from M0) | [x] |
 
 ---
 
@@ -204,10 +204,10 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 
 ## Known Issues
 
-| Issue | Impact | Resolved In |
-|---|---|---|
-| Frontend calls `/api/vocabulary/*`, backend serves `/words/*` | All vocabulary features broken end-to-end | M0 task 0.1 |
-| Frontend calls `/api/practice/*`, `/api/progress/*` -- endpoints don't exist | Practice and stats pages use mock/hardcoded data | M0 task 0.1, M3, M4 |
-| No JWT Authorization header sent from frontend | All authenticated endpoints return 401 | M0 task 0.2 |
-| Frontend `definition` field vs backend `meaning` field | Word data not displayed after fetch | M0 task 0.6 |
-| Old PROJECT_PLAN.md referenced MongoDB, Gemini as primary model, localStorage auth | Outdated -- old file deleted | This document replaces it |
+| Issue | Impact | Resolved In | Status |
+|---|---|---|---|
+| Frontend calls `/api/vocabulary/*`, backend serves `/words/*` | All vocabulary features broken end-to-end | M0 task 0.1 | Resolved |
+| Frontend calls `/api/practice/*`, `/api/progress/*` -- endpoints don't exist | Practice and stats pages use mock/hardcoded data | M0 task 0.1 (paths aligned), M3, M4 (endpoints to be built) | Partially resolved |
+| No JWT Authorization header sent from frontend | All authenticated endpoints return 401 | M0 task 0.2 | Resolved |
+| Frontend `definition` field vs backend `meaning` field | Word data not displayed after fetch | M0 task 0.6 | Resolved |
+| Old PROJECT_PLAN.md referenced MongoDB, Gemini as primary model, localStorage auth | Outdated -- old file deleted | This document replaces it | Resolved |

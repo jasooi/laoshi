@@ -6,7 +6,10 @@
       "Bash(npx tsc:*)",
       "Bash(curl:*)",
       "Bash(source:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(timeout:*)",
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3MDk2NzYyMiwianRpIjoiMGI1MGQ3MGUtY2RmZi00OGNlLWIyMzItYTM3YmI4OTkxMzVhIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjMiLCJuYmYiOjE3NzA5Njc2MjIsImNzcmYiOiI4NGUzYWU0Yy1hYjJmLTQ3NzgtOTEwMS1iYmJmYjMzY2ZiNmQiLCJleHAiOjE3NzA5Njg1MjJ9.e_aaQm2oGUUo4VriMLJiwYT3K74AkIZBqcM0g2i7ags\")"
     ]
   }
 }
