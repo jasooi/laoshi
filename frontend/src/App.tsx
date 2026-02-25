@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
 import Welcome from './pages/Welcome'
+import Login from './pages/Login'
+import Register from './pages/Register'
 import Home from './pages/Home'
 import Practice from './pages/Practice'
 import Progress from './pages/Progress'
@@ -11,17 +14,17 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Welcome page without Layout (no sidebar) */}
-        <Route path="/" element={<Welcome />} />
+        {/* Public routes -- no auth required */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-        {/* Practice page without Layout (has its own sidebar) */}
-        <Route path="/practice" element={<Practice />} />
-
-        {/* Pages with Layout (with sidebar) */}
-        <Route path="/home" element={<Layout><Home /></Layout>} />
-        <Route path="/progress" element={<Layout><Progress /></Layout>} />
-        <Route path="/vocabulary" element={<Layout><Vocabulary /></Layout>} />
-        <Route path="/settings" element={<Layout><Settings /></Layout>} />
+        {/* Protected routes */}
+        <Route path="/" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
+        <Route path="/practice" element={<ProtectedRoute><Practice /></ProtectedRoute>} />
+        <Route path="/home" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+        <Route path="/progress" element={<ProtectedRoute><Layout><Progress /></Layout></ProtectedRoute>} />
+        <Route path="/vocabulary" element={<ProtectedRoute><Layout><Vocabulary /></Layout></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
   )

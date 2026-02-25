@@ -27,13 +27,24 @@ Most language learning apps target complete beginners with basic grammar drills 
 ## 4. Core Features
 
 ### 4.1 AI-Coached Practice Sessions
-The centrepiece of Laoshi. The learner selects a vocabulary collection, and the AI coach presents words one at a time on a flashcard. The learner types a sentence using the word, and the coach evaluates it for:
-- Grammatical correctness
-- Naturalness (does it sound like something a native speaker would say?)
-- Appropriate word choice and usage context
-- The coach provides corrections, explanations, and example sentences as feedback.
+The centrepiece of Laoshi. The AI coach ("Laoshi") has a consistent sassy-but-encouraging teacher persona and guides the learner through practice sessions using a multi-agent architecture. The system presents vocabulary words one at a time on a flashcard. For each word, the learner can:
+- Submit one or more practice sentences for evaluation (multiple attempts allowed)
+- Chat freely with Laoshi (ask questions, discuss goals, ask about the word or prior feedback)
+- Click "Next Word" to advance to the next word
 
-The number of words per session is configurable in Settings.
+The coach evaluates each submitted sentence for:
+- Grammatical correctness (1-10)
+- Word usage accuracy (1-10)
+- Naturalness (1-10) -- does it sound like something a native speaker would say?
+- The coach provides persona-toned feedback, corrections, explanations, and example sentences.
+
+**Multi-attempt scoring:** When the learner clicks "Next Word", the system averages all attempt scores for that word. A word is considered correctly practiced when the averaged grammar score is 10 and averaged usage score is >= 8. If the word was never attempted (no sentences submitted), clicking "Next Word" counts it as skipped.
+
+**Session end:** The session ends when all words have been either attempted or skipped. At session end, the coach produces a summary with 2 specific positives and 1 area for improvement, drawn from actual session content. The system also updates persistent user memory (mem0) with learning patterns observed during the session.
+
+**Persistent memory:** Laoshi remembers user preferences, learning patterns, and study style across sessions via mem0 (cross-session memory). This enables personalised coaching that adapts over time.
+
+The number of words per session is configurable (default 10, user-settable later via Settings). Words are selected randomly from the learner's vocabulary, excluding mastered words (confidence >= 0.9).
 
 ### 4.2 Vocabulary Management
 - **CSV Import**: Learners can upload their own vocabulary from CSV files
@@ -94,11 +105,29 @@ Attach images and personal notes to words as memory aids that trigger recall thr
 
 ## 6. AI Strategy
 
-- **Primary Model**: DeepSeek (`deepseek-chat`), chosen for its strong understanding of Mandarin nuance, natural phrasing, and cultural context
-- **Backup Model**: Gemini 2.5 Flash (`gemini-2.5-flash`), used as automatic fallback when the primary model is unavailable
+### 6.1 Multi-Agent Architecture
+Laoshi uses a multi-agent system built on the OpenAI Agents SDK:
+
+- **Orchestrator Agent** (Gemini Flash): Primary agent with sassy teacher persona. Classifies user intent (sentence attempt vs chat/question), responds to chat directly, calls the Feedback Agent as a tool for sentence evaluation, and hands off to the Summary Agent at session end.
+- **Feedback Agent** (DeepSeek): Agent-as-tool. Evaluates sentences for grammar, usage, and naturalness. Returns structured JSON scores. Stateless -- receives only the current sentence and target word. DeepSeek is used for its strong Mandarin evaluation capabilities.
+- **Summary Agent** (Gemini Flash): Handoff agent activated at session end. Reads the full conversation history and produces a session summary with mem0 update recommendations.
+
+### 6.2 Design Principles
+- Agents reason; app code manages all data. No agent has direct database or memory-store tools.
+- Session state (word counter, completion) is tracked deterministically in app code, never by the LLM.
+- All writes to PostgreSQL and mem0 happen in app code after agent output is returned.
+- Persona tone is baked into agent system prompts, not applied by a separate tone agent.
+- Defensive score extraction: app code takes scores from the feedback agent's raw tool output, not from the orchestrator's text response.
+
+### 6.3 Persistent Memory (mem0)
+Cross-session memory stores user preferences, learning patterns, and study style observations. Memory is read at session start (injected into agent context) and written at session end (based on Summary Agent recommendations). Per-turn updates are avoided to prevent noisy, low-signal entries.
+
+### 6.4 Model Selection
+- **DeepSeek** (`deepseek-chat`): Used for the Feedback Agent -- chosen for its strong understanding of Mandarin nuance, natural phrasing, and cultural context
+- **Gemini Flash** (`gemini-2.5-flash`): Used for the Orchestrator and Summary agents -- chosen for speed in conversational responses
 - **Default Access**: Free-tier API keys provided by the app for both models
-- **BYOK Fallback**: Users can supply their own API key in Settings when default keys reach usage limits
-- **Evaluation Criteria**: The AI coach assesses sentences on grammar, naturalness, and contextual word usage — it does not merely check for correctness but evaluates whether the sentence sounds like something a native speaker would actually say
+- **BYOK Fallback**: Users can supply their own API key in Settings when default keys reach usage limits (future milestone)
+- **Evaluation Criteria**: The AI coach assesses sentences on grammar (1-10), word usage accuracy (1-10), and naturalness (1-10) -- it does not merely check for correctness but evaluates whether the sentence sounds like something a native speaker would actually say
 
 ## 7. MVP Scope (Phase 1)
 

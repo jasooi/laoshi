@@ -1,31 +1,84 @@
 # This file contains the resources for the Flask-Restful app
 # 8 Resources to be defined: word, wordslist, user, userslist, session, sessionslist, word_session, word_sessionslist
 
-from flask import request
+from flask import request, make_response
 from flask_restful import Resource
 from http import HTTPStatus
-from models import Word, User, SessionWord, UserSession
+from models import Word, User, SessionWord, UserSession, TokenBlocklist
 from datetime import datetime
-from utils import hash_password, check_password
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from utils import hash_password, check_password, paginate_query
+from extensions import db
+from flask_jwt_extended import (
+    create_access_token, create_refresh_token,
+    jwt_required, get_jwt_identity, get_jwt,
+    set_refresh_cookies, unset_refresh_cookies
+)
 from sqlalchemy.exc import IntegrityError
+import re
+
+
+def validate_password(password: str) -> tuple[bool, str]:
+    """
+    Validate password meets security requirements.
+    Returns (is_valid, error_message).
+    
+    Requirements:
+    - At least 8 characters
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - Only alphanumeric characters (letters and numbers)
+    """
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    
+    if not re.match(r'^[a-zA-Z0-9]+$', password):
+        return False, "Password must contain only letters and numbers"
+    
+    return True, ""
 
 class WordListResource(Resource):
 
     @jwt_required()
     def get(self):
         vc_user = User.get_by_id(int(get_jwt_identity()))
-        try:
-            words_list = Word.get_full_list(vc_user)
-        except Exception as e:
-            return {"error": str(e)}, 500
 
-        if not words_list:
-            return [], 200
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        search = request.args.get('search', '', type=str).strip()
+        sort_by = request.args.get('sort_by', 'pinyin', type=str)
 
-        words_list_json = [w.format_data(vc_user) for w in words_list]
-        return words_list_json, 200
-        
+        base_query = Word.get_query_for_user(vc_user)
+
+        if search:
+            pattern = f"%{search}%"
+            base_query = base_query.filter(
+                db.or_(
+                    Word.word.ilike(pattern),
+                    Word.pinyin.ilike(pattern),
+                    Word.meaning.ilike(pattern),
+                )
+            )
+
+        if sort_by == 'word':
+            base_query = base_query.order_by(Word.word)
+        else:
+            base_query = base_query.order_by(Word.pinyin)
+
+        items, pagination = paginate_query(base_query, page=page, per_page=per_page)
+        data = [w.format_data(vc_user) for w in items]
+
+        return {"data": data, "pagination": pagination}, 200
+
     @jwt_required()
     def post(self):
         # Words are created in bulk by default
@@ -33,9 +86,16 @@ class WordListResource(Resource):
         if not data:
             return {"error": "No data provided"}, 400
 
+        if not isinstance(data, list):
+            return {"error": "Expected a JSON array of words"}, 400
+
+        for i, item in enumerate(data):
+            for key in ("word", "pinyin", "meaning"):
+                if key not in item or not item[key]:
+                    return {"error": f"Row {i+1} is missing required field: {key}"}, 400
+
         vc_user = User.get_by_id(int(get_jwt_identity()))
 
-        word_to_add = None
         words_list = []
         for item in data:
             word_to_add = Word(word=item["word"], pinyin=item["pinyin"], meaning=item["meaning"], source_name=item.get("source_name"), user_id=vc_user.id)
@@ -184,6 +244,12 @@ class UserListResource(Resource):
         # optional fields - use dict.get() to default to None if not found
         preferred_name = data.get('preferred_name')
         non_hash_password = data.get('password')
+        
+        # Validate password
+        is_password_valid, password_error = validate_password(non_hash_password)
+        if not is_password_valid:
+            return {"error": password_error}, 400
+        
         hashed_password = hash_password(non_hash_password)
 
         if not User.is_email_valid(email):
@@ -479,17 +545,66 @@ class TokenResource(Resource):
         password = data.get('password')
 
         user = User.get_by_username(username)
-        
+
         if not user or not check_password(password, user.password):
             return {'message': 'Username or password is incorrect.'}, HTTPStatus.UNAUTHORIZED
-        
+
         try:
-            access_token = create_access_token(identity=str(user.id))
+            identity = str(user.id)
+            access_token = create_access_token(identity=identity)
+            refresh_token = create_refresh_token(identity=identity)
         except Exception as e:
             return {'message': 'Failure creating access token.'}, 500
-        
-        return {'access_token': access_token}, HTTPStatus.OK
+
+        response = make_response(
+            {'access_token': access_token},
+            HTTPStatus.OK
+        )
+        set_refresh_cookies(response, refresh_token)
+        return response
     
+
+class TokenRefreshResource(Resource):
+    @jwt_required(refresh=True)
+    def post(self):
+        """Issue a new access token + rotated refresh token."""
+        identity = get_jwt_identity()
+        old_jti = get_jwt()['jti']
+
+        # Blocklist the old refresh token
+        now = datetime.now()
+        blocklist_entry = TokenBlocklist(jti=old_jti, created_ds=now)
+        blocklist_entry.add()
+
+        # Issue new tokens
+        new_access_token = create_access_token(identity=identity)
+        new_refresh_token = create_refresh_token(identity=identity)
+
+        response = make_response(
+            {'access_token': new_access_token},
+            HTTPStatus.OK
+        )
+        set_refresh_cookies(response, new_refresh_token)
+        return response
+
+
+class TokenRevokeResource(Resource):
+    @jwt_required(refresh=True)
+    def post(self):
+        """Revoke the refresh token (logout)."""
+        jti = get_jwt()['jti']
+        now = datetime.now()
+
+        blocklist_entry = TokenBlocklist(jti=jti, created_ds=now)
+        blocklist_entry.add()
+
+        response = make_response(
+            {'message': 'Token revoked'},
+            HTTPStatus.OK
+        )
+        unset_refresh_cookies(response)
+        return response
+
 
 class MeResource(Resource):
     # return data on self for logged in users

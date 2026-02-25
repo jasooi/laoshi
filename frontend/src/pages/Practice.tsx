@@ -1,84 +1,95 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
-import api from '../lib/api'
-import { Word } from '../types/api'
+import { Link, useNavigate } from 'react-router-dom'
+import { practiceApi } from '../lib/api'
+import { FeedbackCard } from '../components/FeedbackCard'
+import { SessionSummary } from '../components/SessionSummary'
+import type { WordContext, FeedbackData, PracticeSummaryResponse } from '../types/api'
 
 interface Message {
   id: number
   sender: 'laoshi' | 'user'
   text: string
   timestamp: string
+  feedback?: FeedbackData
 }
 
-// ============================================
-// CONFIGURABLE SETTINGS
-// TODO: Move to Settings page when implemented
-// ============================================
-const WORDS_TO_PRACTICE = 10 // Default number of words per practice session
-
 const Practice = () => {
+  const navigate = useNavigate()
+  
+  // Session state
+  const [sessionId, setSessionId] = useState<number | null>(null)
+  const [sessionPhase, setSessionPhase] = useState<'initializing' | 'practicing' | 'completed'>('initializing')
+  
+  // Word state
+  const [currentWord, setCurrentWord] = useState<WordContext | null>(null)
   const [showPinyin, setShowPinyin] = useState(false)
   const [showTranslation, setShowTranslation] = useState(false)
+  
+  // Progress state
+  const [wordsTotal, setWordsTotal] = useState(0)
+  const [wordsPracticed, setWordsPracticed] = useState(0)
+  const [wordsSkipped, setWordsSkipped] = useState(0)
+  
+  // Chat state
+  const [messages, setMessages] = useState<Message[]>([])
   const [inputText, setInputText] = useState('')
+  const [isWaiting, setIsWaiting] = useState(false)
+  
+  // Sidebar state
   const [practicedWordsOpen, setPracticedWordsOpen] = useState(false)
   const [skippedWordsOpen, setSkippedWordsOpen] = useState(false)
-  const [currentWord, setCurrentWord] = useState<Word | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [practicedWords, setPracticedWords] = useState<Word[]>([])
-  const [skippedWords, setSkippedWords] = useState<Word[]>([])
+  const [practicedWords, setPracticedWords] = useState<WordContext[]>([])
+  const [skippedWords, setSkippedWords] = useState<WordContext[]>([])
+  
+  // Summary state
+  const [summary, setSummary] = useState<PracticeSummaryResponse | null>(null)
+  
+  // Error state
+  const [error, setError] = useState<string | null>(null)
 
-  const wordsProgress = {
-    current: practicedWords.length + 1,
-    total: WORDS_TO_PRACTICE,
-  }
-
-  const getMockWord = (): Word => ({
-    id: 1,
-    word: '学习',
-    pinyin: 'xué xí',
-    meaning: 'to study, to learn',
-    confidence_score: 0.5,
-    status: 'Learning',
-    source_name: null,
-  })
-
-  // Fetch next word from API
-  const fetchNextWord = async () => {
-    setLoading(true)
-    try {
-      const response = await api.get('/api/practice/next-word')
-      const data = response.data
-      setCurrentWord(data)
-      const promptMessage: Message = {
-        id: Date.now(),
-        sender: 'laoshi',
-        text: `请用'${data.word}'造一个句子`,
-        timestamp: getCurrentTime(),
-      }
-      setMessages((prev) => [...prev, promptMessage])
-    } catch {
-      // Fallback: endpoint does not exist yet, use mock data
-      console.log('API not available, using mock data')
-      const mockWord = getMockWord()
-      setCurrentWord(mockWord)
-      const promptMessage: Message = {
-        id: Date.now(),
-        sender: 'laoshi',
-        text: `请用'${mockWord.word}'造一个句子`,
-        timestamp: getCurrentTime(),
-      }
-      setMessages((prev) => [...prev, promptMessage])
-    } finally {
-      setLoading(false)
-    }
-  }
-
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const initializedRef = useRef(false)
+
+  // Auto-scroll to bottom of messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  // Initialize session on mount
   useEffect(() => {
     if (initializedRef.current) return
     initializedRef.current = true
-    fetchNextWord()
+    
+    const initSession = async () => {
+      setIsWaiting(true)
+      try {
+        const response = await practiceApi.startSession()
+        const data = response.data
+        
+        setSessionId(data.session.id)
+        setCurrentWord(data.current_word)
+        setWordsTotal(data.words_total)
+        setWordsPracticed(data.words_practiced)
+        setWordsSkipped(data.words_skipped)
+        
+        // Add greeting message
+        const greetingMessage: Message = {
+          id: Date.now(),
+          sender: 'laoshi',
+          text: data.greeting_message,
+          timestamp: getCurrentTime(),
+        }
+        setMessages([greetingMessage])
+        setSessionPhase('practicing')
+      } catch (err: any) {
+        const errorMsg = err.response?.data?.error || 'Failed to start practice session'
+        setError(errorMsg)
+      } finally {
+        setIsWaiting(false)
+      }
+    }
+    
+    initSession()
   }, [])
 
   const getCurrentTime = () => {
@@ -89,7 +100,7 @@ const Practice = () => {
   }
 
   const handleSubmit = async () => {
-    if (!inputText.trim() || !currentWord) return
+    if (!inputText.trim() || !sessionId || !currentWord) return
 
     // Add user message
     const userMessage: Message = {
@@ -99,53 +110,91 @@ const Practice = () => {
       timestamp: getCurrentTime(),
     }
     setMessages((prev) => [...prev, userMessage])
+    setInputText('')
+    setIsWaiting(true)
 
     try {
-      const response = await api.post('/api/practice/evaluate', {
-        wordId: currentWord.id,
-        sentence: inputText,
-      })
-      const evaluation = response.data
-      const laoshiResponse: Message = {
+      const response = await practiceApi.sendMessage(sessionId, userMessage.text)
+      const data = response.data
+      
+      const laoshiMessage: Message = {
         id: Date.now() + 1,
         sender: 'laoshi',
-        text: evaluation.feedback || `Great job! 很好！ Your sentence shows good understanding of "${currentWord.word}". The structure is natural and the context is appropriate. Keep practicing!`,
+        text: data.laoshi_response,
         timestamp: getCurrentTime(),
+        feedback: data.feedback || undefined,
       }
-      setMessages((prev) => [...prev, laoshiResponse])
-    } catch {
-      // Fallback response if API fails
-      const laoshiResponse: Message = {
+      setMessages((prev) => [...prev, laoshiMessage])
+      
+      // Update progress counts
+      setWordsPracticed(data.words_practiced)
+      setWordsSkipped(data.words_skipped)
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to send message'
+      const errorMessage: Message = {
         id: Date.now() + 1,
         sender: 'laoshi',
-        text: `Great job! 很好！ Your sentence shows good understanding of "${currentWord.word}". The structure is natural and the context is appropriate. Keep practicing!`,
+        text: `Sorry, I had trouble processing that. ${errorMsg}`,
         timestamp: getCurrentTime(),
       }
-      setMessages((prev) => [...prev, laoshiResponse])
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsWaiting(false)
     }
-
-    // Add to practiced words
-    setPracticedWords((prev) => [...prev, currentWord])
-    setInputText('')
   }
 
-  const handleSkip = () => {
-    if (!currentWord) return
+  const handleNextWord = async () => {
+    if (!sessionId || !currentWord) return
 
-    // Add skip message
-    const skipMessage: Message = {
-      id: Date.now(),
-      sender: 'laoshi',
-      text: `No problem! Let's move on to the next word.`,
-      timestamp: getCurrentTime(),
+    setIsWaiting(true)
+    
+    // Track if current word had attempts before moving
+    const hadAttempts = messages.some(m => m.sender === 'user' && m.feedback)
+    
+    try {
+      const response = await practiceApi.nextWord(sessionId)
+      const data = response.data
+      
+      // Update sidebar trays
+      if (hadAttempts) {
+        setPracticedWords(prev => [...prev, currentWord])
+      } else {
+        setSkippedWords(prev => [...prev, currentWord])
+      }
+      
+      // Update progress
+      setWordsPracticed(data.words_practiced)
+      setWordsSkipped(data.words_skipped)
+      
+      if (data.session_complete) {
+        // Session complete
+        setSessionPhase('completed')
+        if (data.summary) {
+          setSummary(data.summary)
+        }
+      } else if (data.current_word) {
+        // Next word available
+        setCurrentWord(data.current_word)
+        const laoshiMessage: Message = {
+          id: Date.now(),
+          sender: 'laoshi',
+          text: data.laoshi_response,
+          timestamp: getCurrentTime(),
+        }
+        setMessages((prev) => [...prev, laoshiMessage])
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || 'Failed to advance to next word'
+      const errorMessage: Message = {
+        id: Date.now(),
+        sender: 'laoshi',
+        text: `Sorry, I had trouble moving to the next word. ${errorMsg}`,
+        timestamp: getCurrentTime(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setIsWaiting(false)
     }
-    setMessages((prev) => [...prev, skipMessage])
-
-    // Add to skipped words
-    setSkippedWords((prev) => [...prev, currentWord])
-
-    // Fetch next word
-    fetchNextWord()
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -154,6 +203,106 @@ const Practice = () => {
       handleSubmit()
     }
   }
+
+  const handleNewSession = () => {
+    // Reset and start new session
+    initializedRef.current = false
+    setSessionId(null)
+    setSessionPhase('initializing')
+    setCurrentWord(null)
+    setWordsTotal(0)
+    setWordsPracticed(0)
+    setWordsSkipped(0)
+    setMessages([])
+    setPracticedWords([])
+    setSkippedWords([])
+    setSummary(null)
+    setError(null)
+    
+    // Trigger re-initialization
+    setTimeout(() => {
+      const initSession = async () => {
+        setIsWaiting(true)
+        try {
+          const response = await practiceApi.startSession()
+          const data = response.data
+          
+          setSessionId(data.session.id)
+          setCurrentWord(data.current_word)
+          setWordsTotal(data.words_total)
+          setWordsPracticed(data.words_practiced)
+          setWordsSkipped(data.words_skipped)
+          
+          const greetingMessage: Message = {
+            id: Date.now(),
+            sender: 'laoshi',
+            text: data.greeting_message,
+            timestamp: getCurrentTime(),
+          }
+          setMessages([greetingMessage])
+          setSessionPhase('practicing')
+        } catch (err: any) {
+          const errorMsg = err.response?.data?.error || 'Failed to start practice session'
+          setError(errorMsg)
+        } finally {
+          setIsWaiting(false)
+        }
+      }
+      initSession()
+    }, 0)
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex h-screen bg-gray-50 items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md text-center">
+          <div className="text-6xl mb-4">😅</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Oops!</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate('/vocabulary')}
+              className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+            >
+              Go to Vocabulary
+            </button>
+            <Link
+              to="/home"
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
+              Back to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show initializing state
+  if (sessionPhase === 'initializing') {
+    return (
+      <div className="flex h-screen bg-gray-50 items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Starting your practice session...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show completed state
+  if (sessionPhase === 'completed' && summary) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8">
+        <SessionSummary summary={summary} onNewSession={handleNewSession} />
+      </div>
+    )
+  }
+
+  const progressPercent = wordsTotal > 0 
+    ? ((wordsPracticed + wordsSkipped) / wordsTotal) * 100 
+    : 0
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -175,12 +324,12 @@ const Practice = () => {
         {/* Progress */}
         <div className="px-4 py-3">
           <p className="text-sm text-gray-600 mb-2">
-            {wordsProgress.current} / {wordsProgress.total} words practiced
+            {wordsPracticed + wordsSkipped} / {wordsTotal} words ({wordsPracticed} practiced, {wordsSkipped} skipped)
           </p>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="h-2 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500"
-              style={{ width: `${(wordsProgress.current / wordsProgress.total) * 100}%` }}
+              className="h-2 rounded-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
             />
           </div>
         </div>
@@ -219,9 +368,7 @@ const Practice = () => {
 
           {/* Word Card */}
           <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 rounded-2xl p-6 text-center">
-            {loading ? (
-              <div className="py-8 text-gray-400">Loading...</div>
-            ) : currentWord ? (
+            {currentWord ? (
               <>
                 <div className="text-6xl font-medium text-gray-900 mb-4">
                   {currentWord.word}
@@ -234,13 +381,6 @@ const Practice = () => {
                 {showTranslation && (
                   <div className="text-gray-500">{currentWord.meaning}</div>
                 )}
-
-                <div className="mt-6 pt-4 border-t border-gray-200/50">
-                  <p className="text-xs text-gray-500 mb-2">Confidence Level</p>
-                  <span className="inline-block px-4 py-1.5 bg-orange-400 text-white text-sm font-medium rounded-full">
-                    {currentWord.status}
-                  </span>
-                </div>
               </>
             ) : (
               <div className="py-8 text-gray-400">No word available</div>
@@ -254,7 +394,7 @@ const Practice = () => {
             onClick={() => setPracticedWordsOpen(!practicedWordsOpen)}
             className="flex items-center justify-between w-full py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider hover:text-gray-900"
           >
-            <span>Practiced Words</span>
+            <span>Practiced Words ({practicedWords.length})</span>
             <svg
               className={`w-5 h-5 transition-transform ${practicedWordsOpen ? 'rotate-90' : ''}`}
               fill="none"
@@ -267,8 +407,8 @@ const Practice = () => {
           {practicedWordsOpen && (
             <div className="py-2 text-sm text-gray-500">
               {practicedWords.length > 0 ? (
-                practicedWords.map((word) => (
-                  <div key={word.id} className="py-1">{word.word}</div>
+                practicedWords.map((word, idx) => (
+                  <div key={idx} className="py-1">{word.word}</div>
                 ))
               ) : (
                 <p className="text-gray-400 italic">No words practiced yet</p>
@@ -283,7 +423,7 @@ const Practice = () => {
             onClick={() => setSkippedWordsOpen(!skippedWordsOpen)}
             className="flex items-center justify-between w-full py-2 text-sm font-semibold text-gray-600 uppercase tracking-wider hover:text-gray-900"
           >
-            <span>Skipped Words</span>
+            <span>Skipped Words ({skippedWords.length})</span>
             <svg
               className={`w-5 h-5 transition-transform ${skippedWordsOpen ? 'rotate-90' : ''}`}
               fill="none"
@@ -296,8 +436,8 @@ const Practice = () => {
           {skippedWordsOpen && (
             <div className="py-2 text-sm text-gray-500">
               {skippedWords.length > 0 ? (
-                skippedWords.map((word) => (
-                  <div key={word.id} className="py-1">{word.word}</div>
+                skippedWords.map((word, idx) => (
+                  <div key={idx} className="py-1">{word.word}</div>
                 ))
               ) : (
                 <p className="text-gray-400 italic">No words skipped</p>
@@ -325,18 +465,6 @@ const Practice = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-gray-400">
-            <button className="hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-            </button>
-            <button className="hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </button>
-          </div>
         </div>
 
         {/* Messages Area */}
@@ -360,7 +488,15 @@ const Practice = () => {
                     : 'bg-white border border-gray-200 text-gray-800 rounded-2xl rounded-bl-md'
                 } px-5 py-3 shadow-sm`}
               >
-                <p className="text-base">{message.text}</p>
+                <p className="text-base whitespace-pre-wrap">{message.text}</p>
+                
+                {/* Render FeedbackCard inside laoshi message if feedback exists */}
+                {message.sender === 'laoshi' && message.feedback && (
+                  <div className="mt-3">
+                    <FeedbackCard feedback={message.feedback} />
+                  </div>
+                )}
+                
                 <p
                   className={`text-xs mt-1 ${
                     message.sender === 'user' ? 'text-purple-200' : 'text-gray-400'
@@ -371,6 +507,26 @@ const Practice = () => {
               </div>
             </div>
           ))}
+          
+          {/* Typing indicator */}
+          {isWaiting && (
+            <div className="flex justify-start">
+              <img
+                src="/laoshi-logo.png"
+                alt="Laoshi"
+                className="w-8 h-8 rounded-full object-cover mr-3 mt-1"
+              />
+              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-5 py-3 shadow-sm">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Area */}
@@ -381,24 +537,26 @@ const Practice = () => {
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type your sentence here..."
-              className="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 min-h-[60px]"
+              disabled={isWaiting}
+              className="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 min-h-[60px] disabled:opacity-50"
               rows={2}
             />
             <div className="flex items-center justify-between mt-2">
               <button
-                onClick={handleSkip}
-                className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors"
+                onClick={handleNextWord}
+                disabled={isWaiting}
+                className="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                 </svg>
-                <span className="text-sm">Skip this word</span>
+                <span className="text-sm">Next Word</span>
               </button>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-400">{inputText.length} characters</span>
                 <button
                   onClick={handleSubmit}
-                  disabled={!inputText.trim()}
+                  disabled={!inputText.trim() || isWaiting}
                   className="flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 disabled:from-gray-300 disabled:to-gray-300 text-white px-6 py-2.5 rounded-full font-medium transition-all"
                 >
                   <span>Submit</span>

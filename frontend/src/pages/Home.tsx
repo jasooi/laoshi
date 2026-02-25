@@ -8,17 +8,14 @@ const Home = () => {
   const [masteryProgress] = useState(0)
   const [wordsWaiting, setWordsWaiting] = useState(0)
 
-  // Fetch stats from API — only if user is authenticated
+  // Fetch stats from API
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (!token) return
-
     const fetchStats = async () => {
       try {
-        const vocabResponse = await api.get('/api/words')
-        const vocabData = vocabResponse.data
-        setTotalWords(Array.isArray(vocabData) ? vocabData.length : 0)
-        setWordsWaiting(Array.isArray(vocabData) ? vocabData.length : 0)
+        const vocabResponse = await api.get('/api/words', { params: { per_page: 1 } })
+        const total = vocabResponse.data.pagination?.total ?? 0
+        setTotalWords(total)
+        setWordsWaiting(total)
       } catch {
         // 404 = no words yet (expected for new users), 401 = not authenticated
         // Both are fine — defaults are already 0

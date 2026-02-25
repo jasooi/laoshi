@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 interface SidebarProps {
   currentPath: string
@@ -11,6 +12,14 @@ interface SidebarItem {
 }
 
 const Sidebar = ({ currentPath }: SidebarProps) => {
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
+
   const sidebarItems: SidebarItem[] = [
     {
       path: '/home',
@@ -52,7 +61,7 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
   ]
 
   return (
-    <aside className="w-20 bg-white border-r border-gray-200 flex flex-col items-center py-6 space-y-4">
+    <aside className="w-20 bg-white border-r border-gray-200 flex flex-col items-center py-6">
       {/* Logo/Brand */}
       <div className="mb-4">
         <img
@@ -63,23 +72,41 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
       </div>
 
       {/* Navigation Items */}
-      {sidebarItems.map((item) => {
-        const isActive = currentPath === item.path
-        return (
-          <Link
-            key={item.path}
-            to={item.path}
-            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-              isActive
-                ? 'bg-purple-100 text-purple-600'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            }`}
-            title={item.label}
-          >
-            {item.icon}
-          </Link>
-        )
-      })}
+      <div className="space-y-4">
+        {sidebarItems.map((item) => {
+          const isActive = currentPath === item.path
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                isActive
+                  ? 'bg-purple-100 text-purple-600'
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              }`}
+              title={item.label}
+            >
+              {item.icon}
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Logout Button -- pushed to bottom */}
+      <button
+        onClick={handleLogout}
+        className="mt-auto w-12 h-12 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+        title="Log out"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+          />
+        </svg>
+      </button>
     </aside>
   )
 }

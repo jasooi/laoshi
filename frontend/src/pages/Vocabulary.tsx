@@ -1,285 +1,129 @@
-import { useState, useEffect, useRef } from 'react'
-import Papa from 'papaparse'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../lib/api'
-import { Word } from '../types/api'
+import { Word, PaginationMeta } from '../types/api'
+import Pagination from '../components/Pagination'
+import UploadModal from './vocabulary/UploadModal'
+import EditWordModal from './vocabulary/EditWordModal'
 
 const Vocabulary = () => {
   const [words, setWords] = useState<Word[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [sortBy, setSortBy] = useState<'pinyin' | 'word'>('pinyin')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+  const [pagination, setPagination] = useState<PaginationMeta | null>(null)
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [sourceName, setSourceName] = useState('')
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
   const [uploadWarning, setUploadWarning] = useState<string | null>(null)
   const [editingWord, setEditingWord] = useState<Word | null>(null)
-  const [editForm, setEditForm] = useState({ word: '', pinyin: '', meaning: '', source_name: '' })
-  const [editError, setEditError] = useState<string | null>(null)
-  const [editSaving, setEditSaving] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   // Fetch vocabulary from API
-  useEffect(() => {
-    fetchVocabulary()
-  }, [])
-
-  const fetchVocabulary = async () => {
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      setLoading(false)
-      return
-    }
+  const fetchVocabulary = useCallback(async () => {
     setLoading(true)
     try {
-      const response = await api.get('/api/words')
-      setWords(Array.isArray(response.data) ? response.data : [])
+      const response = await api.get('/api/words', {
+        params: {
+          page,
+          per_page: perPage,
+          search: debouncedSearch || undefined,
+          sort_by: sortBy,
+        }
+      })
+      setWords(response.data.data)
+      setPagination(response.data.pagination)
     } catch (error) {
       console.error('Error fetching vocabulary:', error)
       setWords([])
+      setPagination(null)
     } finally {
       setLoading(false)
     }
+  }, [page, perPage, debouncedSearch, sortBy])
+
+  useEffect(() => {
+    fetchVocabulary()
+  }, [fetchVocabulary])
+
+  // Handle sort toggle
+  const handleSortToggle = () => {
+    setSortBy(sortBy === 'pinyin' ? 'word' : 'pinyin')
+    setPage(1)
   }
 
-  // Filter and sort words
-  const filteredWords = words
-    .filter(word =>
-      word.word.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      word.pinyin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      word.meaning.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (sortBy === 'pinyin') {
-        return a.pinyin.localeCompare(b.pinyin)
-      }
-      return a.word.localeCompare(b.word)
-    })
-
-  // Handle file selection
-  const handleFileSelect = (file: File) => {
-    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
-      alert('Only .csv files are accepted')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Maximum file size is 10 MB')
-      return
-    }
-    setSelectedFile(file)
-    setUploadError(null)
-  }
-
-  // Handle drag and drop
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      handleFileSelect(file)
-    }
-  }
-
-  // Handle file input change
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      handleFileSelect(file)
-    }
-  }
-
-  // Handle upload with PapaParse CSV parsing
-  const handleUpload = async () => {
-    if (!selectedFile || !sourceName.trim()) {
-      setUploadError('Please select a file and enter a source name')
-      return
-    }
-
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      setUploadError('You must be logged in to import vocabulary.')
-      return
-    }
-
-    setUploading(true)
-    setUploadError(null)
-    setUploadWarning(null)
-    try {
-      // Parse CSV on the frontend
-      const parseResult = await new Promise<Papa.ParseResult<Record<string, string>>>((resolve, reject) => {
-        Papa.parse<Record<string, string>>(selectedFile, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => resolve(results),
-          error: (error: Error) => reject(error),
-        })
-      })
-
-      // Validate required columns (case-insensitive)
-      const headers = parseResult.meta.fields?.map(f => f.trim().toLowerCase()) || []
-      const requiredColumns = ['word', 'pinyin', 'meaning']
-      const missingColumns = requiredColumns.filter(col => !headers.includes(col))
-
-      if (missingColumns.length > 0) {
-        setUploadError(`CSV is missing required columns: ${missingColumns.join(', ')}. Your CSV must have columns named "word", "pinyin", and "meaning".`)
-        return
-      }
-
-      if (parseResult.data.length === 0) {
-        setUploadError('CSV file contains no data rows. Please check that your file has data below the header row.')
-        return
-      }
-
-      // Build case-insensitive field map
-      const fieldMap: Record<string, string> = {}
-      parseResult.meta.fields?.forEach(f => {
-        fieldMap[f.trim().toLowerCase()] = f
-      })
-
-      // Map rows to backend shape and separate valid from invalid
-      const allRows = parseResult.data.map(row => ({
-        word: row[fieldMap['word']],
-        pinyin: row[fieldMap['pinyin']],
-        meaning: row[fieldMap['meaning']],
-        source_name: sourceName.trim(),
-      }))
-
-      const validRows = allRows.filter(w => w.word && w.pinyin && w.meaning)
-      const skippedCount = allRows.length - validRows.length
-
-      if (validRows.length === 0) {
-        setUploadError('All rows have empty required fields (word, pinyin, or meaning). Please check your CSV.')
-        return
-      }
-
-      // Send valid rows to backend
-      await api.post('/api/words', validRows)
-
-      if (skippedCount > 0) {
-        setUploadWarning(`${skippedCount} row(s) were excluded due to missing data (word, pinyin, or meaning).`)
-      }
-      setShowUploadModal(false)
-      setSelectedFile(null)
-      setSourceName('')
-      setUploadError(null)
-      fetchVocabulary()
-      // uploadWarning is intentionally kept — it displays outside the modal
-    } catch (error: unknown) {
-      console.error('Error uploading file:', error)
-      const axiosError = error as { response?: { status?: number; data?: { error?: string; message?: string } } }
-      if (axiosError.response?.status === 401) {
-        setUploadError('Import failed: You must be logged in to import vocabulary.')
-      } else {
-        const message = axiosError.response?.data?.error || axiosError.response?.data?.message || 'Failed to upload file. Please try again.'
-        setUploadError(`Import failed: ${message}`)
-      }
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  // Handle delete word
+  // Handle delete word (non-optimistic)
   const handleDelete = async (wordId: number) => {
     if (!confirm('Are you sure you want to delete this word?')) return
 
     try {
       await api.delete(`/api/words/${wordId}`)
-      setWords(words.filter(w => w.id !== wordId))
+      fetchVocabulary()
     } catch (error) {
       console.error('Error deleting word:', error)
       alert('Failed to delete word')
     }
   }
 
-  // Handle edit word
-  const handleEdit = (wordId: number) => {
-    const word = words.find(w => w.id === wordId)
-    if (!word) return
-    setEditingWord(word)
-    setEditForm({
-      word: word.word,
-      pinyin: word.pinyin,
-      meaning: word.meaning,
-      source_name: word.source_name || '',
-    })
-    setEditError(null)
+  // Callbacks for modals
+  const handleUploadSuccess = () => {
+    setShowUploadModal(false)
+    setPage(1)
+    fetchVocabulary()
   }
 
-  const handleEditSubmit = async () => {
-    if (!editingWord) return
-    if (!editForm.word.trim() || !editForm.pinyin.trim() || !editForm.meaning.trim()) {
-      setEditError('Word, pinyin, and meaning are required.')
-      return
-    }
-    setEditSaving(true)
-    setEditError(null)
-    try {
-      const payload: Record<string, string> = {
-        word: editForm.word.trim(),
-        pinyin: editForm.pinyin.trim(),
-        meaning: editForm.meaning.trim(),
-      }
-      if (editForm.source_name.trim()) {
-        payload.source_name = editForm.source_name.trim()
-      }
-      const response = await api.put(`/api/words/${editingWord.id}`, payload)
-      // Update local state with the returned data
-      const updatedWord = response.data as Word
-      setWords(words.map(w => w.id === editingWord.id ? updatedWord : w))
-      setEditingWord(null)
-    } catch (error: unknown) {
-      console.error('Error updating word:', error)
-      const axiosError = error as { response?: { data?: { error?: string } } }
-      setEditError(axiosError.response?.data?.error || 'Failed to update word.')
-    } finally {
-      setEditSaving(false)
-    }
+  const handleEditSave = () => {
+    setEditingWord(null)
+    fetchVocabulary()
+  }
+
+  const handlePerPageChange = (newPerPage: number) => {
+    setPerPage(newPerPage)
+    setPage(1)
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Vocabulary</h1>
-        <button
-          onClick={() => { setShowUploadModal(true); setUploadWarning(null) }}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-5 rounded-full transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-          </svg>
-          Import from file
-        </button>
-      </div>
-
-      {/* Upload Warning Banner */}
-      {uploadWarning && (
-        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
-          <p className="text-sm text-amber-700">{uploadWarning}</p>
-          <button onClick={() => setUploadWarning(null)} className="text-amber-400 hover:text-amber-600 ml-3">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Fixed header */}
+      <div className="flex-shrink-0 px-8 pt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">Vocabulary</h1>
+          <button
+            onClick={() => { setShowUploadModal(true); setUploadWarning(null) }}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium py-2.5 px-5 rounded-full transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
+            Import from file
           </button>
         </div>
-      )}
 
-      {/* Main Content Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
+        {/* Upload Warning Banner */}
+        {uploadWarning && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between">
+            <p className="text-sm text-amber-700">{uploadWarning}</p>
+            <button onClick={() => setUploadWarning(null)} className="text-amber-400 hover:text-amber-600 ml-3">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Card with table */}
+      <div className="flex-1 flex flex-col overflow-hidden mx-8 mb-8 bg-white rounded-2xl shadow-sm border border-gray-100">
         {/* Search and Sort Bar */}
-        <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-4">
+        <div className="flex-shrink-0 p-4 border-b border-gray-100 flex items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -293,7 +137,7 @@ const Vocabulary = () => {
             />
           </div>
           <button
-            onClick={() => setSortBy(sortBy === 'pinyin' ? 'word' : 'pinyin')}
+            onClick={handleSortToggle}
             className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -303,27 +147,29 @@ const Vocabulary = () => {
           </button>
         </div>
 
-        {/* Table or Empty State */}
+        {/* Table or Empty/Loading State */}
         {loading ? (
-          <div className="p-16 text-center text-gray-500">Loading...</div>
-        ) : words.length === 0 ? (
-          <div className="p-16 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-purple-100 flex items-center justify-center">
-              <svg className="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+          <div className="flex-1 flex items-center justify-center text-gray-500">Loading...</div>
+        ) : words.length === 0 && !debouncedSearch ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-purple-100 flex items-center justify-center">
+                <svg className="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <p className="text-gray-600 text-lg">
+                No words yet... Let's start by clicking <span className="text-purple-600 font-medium">Import from file</span> to add some words!
+              </p>
             </div>
-            <p className="text-gray-600 text-lg">
-              No words yet... Let's start by clicking <span className="text-purple-600 font-medium">Import from file</span> to add some words!
-            </p>
           </div>
         ) : (
           <>
-            {/* Table */}
-            <div className="overflow-x-auto">
+            {/* Scrollable table */}
+            <div className="flex-1 overflow-y-auto">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
+                <thead className="sticky top-0 bg-white border-b border-gray-100 z-10">
+                  <tr>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">#</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">中文</th>
                     <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Pinyin</th>
@@ -333,271 +179,80 @@ const Vocabulary = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredWords.map((word, index) => (
-                    <tr key={word.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-                      <td className="px-4 py-3 text-base font-medium text-gray-900">{word.word}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{word.pinyin}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{word.meaning}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{word.source_name}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleEdit(word.id)}
-                            className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
-                            title="Edit"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(word.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                            title="Delete"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
+                  {words.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        No words match your search.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    words.map((word, index) => (
+                      <tr key={word.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <td className="px-4 py-3 text-sm text-gray-500">{(page - 1) * perPage + index + 1}</td>
+                        <td className="px-4 py-3 text-base font-medium text-gray-900">{word.word}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{word.pinyin}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{word.meaning}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{word.source_name}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditingWord(word)}
+                              className="p-2 text-gray-400 hover:text-purple-600 transition-colors"
+                              title="Edit"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDelete(word.id)}
+                              className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                              title="Delete"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100 text-sm text-gray-500">
-              Showing {filteredWords.length} of {words.length} words
-            </div>
+            {/* Pagination footer */}
+            {pagination && (
+              <div className="flex-shrink-0 border-t border-gray-100">
+                <Pagination
+                  page={page}
+                  totalPages={pagination.total_pages}
+                  total={pagination.total}
+                  perPage={perPage}
+                  hasNext={pagination.has_next}
+                  hasPrev={pagination.has_prev}
+                  onPageChange={setPage}
+                  onPerPageChange={handlePerPageChange}
+                />
+              </div>
+            )}
           </>
         )}
       </div>
 
-      {/* Upload File Modal */}
-      {showUploadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
-            {/* Modal Header */}
-            <div className="p-6 pb-4">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-xl font-semibold text-gray-900">Upload file</h2>
-                <button
-                  onClick={() => {
-                    setShowUploadModal(false)
-                    setSelectedFile(null)
-                    setSourceName('')
-                    setUploadError(null)
-                  }}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-sm text-gray-500">Only .csv files are accepted. Required columns: word, pinyin, meaning</p>
-            </div>
-
-            {/* Upload Area */}
-            <div className="px-6">
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                  isDragging
-                    ? 'border-purple-500 bg-purple-50'
-                    : selectedFile
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileInputChange}
-                  className="hidden"
-                />
-                {selectedFile ? (
-                  <>
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <p className="text-purple-600 font-medium">{selectedFile.name}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {(selectedFile.size / 1024).toFixed(1)} KB
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                      </svg>
-                    </div>
-                    <p>
-                      <span className="text-purple-600 font-medium">Click to Upload</span>
-                      <span className="text-gray-600"> or drag and drop</span>
-                    </p>
-                    <p className="text-sm text-gray-400 mt-1">Maximum file size 10 MB</p>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Source Name Input */}
-            <div className="px-6 py-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Name your source file
-              </label>
-              <p className="text-xs text-gray-500 mb-2">
-                Words from this file will be tagged with the following name for easy identification
-              </p>
-              <input
-                type="text"
-                placeholder="e.g., Kitchen Vocabulary"
-                value={sourceName}
-                onChange={(e) => setSourceName(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Error Message */}
-            {uploadError && (
-              <div className="px-6 pb-2">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-700">{uploadError}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Modal Footer */}
-            <div className="px-6 pb-6 flex items-center justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowUploadModal(false)
-                  setSelectedFile(null)
-                  setSourceName('')
-                  setUploadError(null)
-                }}
-                className="px-5 py-2.5 text-gray-700 font-medium border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={!selectedFile || !sourceName.trim() || uploading}
-                className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
-              >
-                {uploading && (
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {uploading ? 'Processing...' : 'Attach File'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Word Modal */}
-      {editingWord && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
-            <div className="p-6 pb-4">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-xl font-semibold text-gray-900">Edit Word</h2>
-                <button
-                  onClick={() => { setEditingWord(null); setEditError(null) }}
-                  className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <div className="px-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Word (中文)</label>
-                <input
-                  type="text"
-                  value={editForm.word}
-                  onChange={(e) => setEditForm({ ...editForm, word: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Pinyin</label>
-                <input
-                  type="text"
-                  value={editForm.pinyin}
-                  onChange={(e) => setEditForm({ ...editForm, pinyin: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meaning</label>
-                <input
-                  type="text"
-                  value={editForm.meaning}
-                  onChange={(e) => setEditForm({ ...editForm, meaning: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Source Name</label>
-                <input
-                  type="text"
-                  value={editForm.source_name}
-                  onChange={(e) => setEditForm({ ...editForm, source_name: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {editError && (
-              <div className="px-6 pt-4">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-700">{editError}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="px-6 py-6 flex items-center justify-end gap-3">
-              <button
-                onClick={() => { setEditingWord(null); setEditError(null) }}
-                className="px-5 py-2.5 text-gray-700 font-medium border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEditSubmit}
-                disabled={editSaving}
-                className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
-              >
-                {editSaving && (
-                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {editSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modals */}
+      <UploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadSuccess={handleUploadSuccess}
+        onUploadWarning={setUploadWarning}
+      />
+      <EditWordModal
+        word={editingWord}
+        onClose={() => setEditingWord(null)}
+        onSaveSuccess={handleEditSave}
+      />
     </div>
   )
 }

@@ -22,20 +22,20 @@ class Word(db.Model):
     user = db.relationship('User', back_populates='words')
     sessions = db.relationship('SessionWord', back_populates='word')
 
-    #TODO: extract this out to a function or config or something. feels like a smell
+    STATUS_THRESHOLDS = [
+        (0.9, "Mastered"),
+        (0.7, "Reviewing"),
+        (0.3, "Learning"),
+        (0.0, "Needs Revision"),
+    ]
+
     @property
     def status(self):
         score = self.confidence_score if self.confidence_score is not None else 0.5
-        if score > 0.9:
-            return "Mastered"
-        elif score > 0.7:
-            return "Reviewing"
-        elif score > 0.3:
-            return "Learning"
-        elif score >= 0:
-            return "Needs Revision"
-        else:
-            return "Unknown"
+        for threshold, label in self.STATUS_THRESHOLDS:
+            if score > threshold:
+                return label
+        return "Needs Revision"
     
     def __repr__(self):
         return f"{self.id} - {self.word} - {self.pinyin} - {self.meaning}"
@@ -118,7 +118,11 @@ class Word(db.Model):
         # Returns a list of Word objects for a user
         return cls.query.filter_by(user_id=viewer.id).all()
 
-    
+    @classmethod
+    def get_query_for_user(cls, viewer):
+        """Returns a base query for a user's words (not yet executed)."""
+        return cls.query.filter_by(user_id=viewer.id)
+
     @classmethod
     def get_by_id(cls, id: int):
         # Returns a Word object
@@ -241,6 +245,8 @@ class UserSession(db.Model):
     session_start_ds = db.Column(db.DateTime)
     session_end_ds = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    summary_text = db.Column(db.Text, nullable=True)
+    words_per_session = db.Column(db.Integer, nullable=False, default=10)
 
     user = db.relationship('User', back_populates='sessions')
     session_words = db.relationship('SessionWord', back_populates='user_session')
@@ -257,9 +263,11 @@ class UserSession(db.Model):
             return None
         return {
             'id': self.id,
-            'session_start_ds': self.session_start_ds,
-            'session_end_ds': self.session_end_ds,
-            'user_id': self.user_id
+            'session_start_ds': self.session_start_ds.isoformat() if self.session_start_ds else None,
+            'session_end_ds': self.session_end_ds.isoformat() if self.session_end_ds else None,
+            'user_id': self.user_id,
+            'summary_text': self.summary_text,
+            'words_per_session': self.words_per_session,
         }
 
     def is_owner(self, viewer) -> bool:
@@ -327,6 +335,12 @@ class SessionWord(db.Model):
     session_word_load_ds = db.Column(db.DateTime)
     is_skipped = db.Column(db.Boolean, default=False)
     session_notes = db.Column(db.String(2000))
+    word_order = db.Column(db.Integer, nullable=False, default=0)
+    grammar_score = db.Column(db.Float, nullable=True)
+    usage_score = db.Column(db.Float, nullable=True)
+    naturalness_score = db.Column(db.Float, nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=True)
+    status = db.Column(db.Integer, nullable=False, default=0)  # 0=pending, 1=completed, -1=skipped
 
     __table_args__ = (
         db.PrimaryKeyConstraint('word_id', 'session_id'),
@@ -335,6 +349,8 @@ class SessionWord(db.Model):
     # Define relationships to access the related objects easily
     word = db.relationship('Word', back_populates='sessions')
     user_session = db.relationship('UserSession', back_populates='session_words')
+    attempts = db.relationship('SessionWordAttempt', back_populates='session_word',
+                               order_by='SessionWordAttempt.attempt_number')
 
     def __repr__(self):
         return f"word {self.word_id} in session {self.session_id}"
@@ -349,8 +365,16 @@ class SessionWord(db.Model):
         id_string = str(self.word_id) + '_' + str(self.session_id)
         return {
             'id': id_string,
+            'word_id': self.word_id,
+            'session_id': self.session_id,
+            'word_order': self.word_order,
             'is_skipped': self.is_skipped,
-            'session_notes': self.session_notes
+            'status': self.status,
+            'grammar_score': self.grammar_score,
+            'usage_score': self.usage_score,
+            'naturalness_score': self.naturalness_score,
+            'is_correct': self.is_correct,
+            'session_notes': self.session_notes,
         }
 
     def is_owner(self, viewer) -> bool:
@@ -389,4 +413,85 @@ class SessionWord(db.Model):
     def get_by_session_word_id(cls, word_id: int, session_id: int):
         # Returns a Session_Word object by composite key
         return cls.query.filter_by(word_id=word_id, session_id=session_id).first()
+
+
+class SessionWordAttempt(db.Model):
+    __tablename__ = 'session_word_attempt'
+
+    attempt_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    word_id = db.Column(db.Integer, nullable=False)
+    session_id = db.Column(db.Integer, nullable=False)
+    attempt_number = db.Column(db.Integer, nullable=False)  # 1-indexed
+    sentence = db.Column(db.Text, nullable=False)
+    grammar_score = db.Column(db.Float, nullable=True)
+    usage_score = db.Column(db.Float, nullable=True)
+    naturalness_score = db.Column(db.Float, nullable=True)
+    is_correct = db.Column(db.Boolean, nullable=True)
+    feedback_text = db.Column(db.Text, nullable=True)
+    created_ds = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ['word_id', 'session_id'],
+            ['session_word.word_id', 'session_word.session_id']
+        ),
+    )
+
+    session_word = db.relationship('SessionWord', back_populates='attempts')
+
+    def __repr__(self):
+        return f"attempt {self.attempt_id} for word {self.word_id} in session {self.session_id}"
+
+    def format_data(self):
+        return {
+            'attempt_id': self.attempt_id,
+            'word_id': self.word_id,
+            'session_id': self.session_id,
+            'attempt_number': self.attempt_number,
+            'sentence': self.sentence,
+            'grammar_score': self.grammar_score,
+            'usage_score': self.usage_score,
+            'naturalness_score': self.naturalness_score,
+            'is_correct': self.is_correct,
+            'feedback_text': self.feedback_text,
+            'created_ds': self.created_ds.isoformat() if self.created_ds else None,
+        }
+
+    def add(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    @classmethod
+    def get_by_word_session(cls, word_id: int, session_id: int):
+        """Return all attempts for a specific word in a specific session, ordered by attempt_number."""
+        return cls.query.filter_by(word_id=word_id, session_id=session_id).order_by(cls.attempt_number).all()
+
+    @classmethod
+    def count_by_word_session(cls, word_id: int, session_id: int) -> int:
+        """Return the number of attempts for a specific word in a session."""
+        return cls.query.filter_by(word_id=word_id, session_id=session_id).count()
+
+
+class TokenBlocklist(db.Model):
+    __tablename__ = 'token_blocklist'
+
+    id = db.Column(db.Integer, primary_key=True)
+    jti = db.Column(db.String(36), unique=True, nullable=False, index=True)
+    created_ds = db.Column(db.DateTime, nullable=False)
+
+    def add(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    @classmethod
+    def is_blocklisted(cls, jti: str) -> bool:
+        return cls.query.filter_by(jti=jti).first() is not None
 

@@ -8,7 +8,9 @@ from flask_cors import CORS
 
 # Import from other files
 from extensions import db, jwt
-from resources import WordListResource, WordResource, UserListResource, UserResource, SessionListResource, SessionResource, SessionWordListResource, SessionWordResource, HomeResource, TokenResource, MeResource 
+from resources import WordListResource, WordResource, UserListResource, UserResource, SessionListResource, SessionResource, SessionWordListResource, SessionWordResource, HomeResource, TokenResource, TokenRefreshResource, TokenRevokeResource, MeResource 
+from practice_resources import PracticeSessionResource, PracticeMessageResource, PracticeNextWordResource, PracticeSummaryResource
+from models import TokenBlocklist
 from config import Config
 
 
@@ -16,7 +18,12 @@ def register_extensions(app):
     db.init_app(app)
     migrate = Migrate(app, db)
     jwt.init_app(app)
-    CORS(app)
+    CORS(app, supports_credentials=True)
+
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        jti = jwt_payload['jti']
+        return TokenBlocklist.is_blocklisted(jti)
     
 
 def register_resources(app):
@@ -31,7 +38,15 @@ def register_resources(app):
     api.add_resource(SessionWordResource, '/sessions/<int:session_id>/words/<int:word_id>')   
     api.add_resource(HomeResource, '/')
     api.add_resource(TokenResource, '/token')
+    api.add_resource(TokenRefreshResource, '/token/refresh')
+    api.add_resource(TokenRevokeResource, '/token/revoke')
     api.add_resource(MeResource, '/me')
+    
+    # Practice session endpoints
+    api.add_resource(PracticeSessionResource, '/practice/sessions')
+    api.add_resource(PracticeMessageResource, '/practice/sessions/<int:id>/messages')
+    api.add_resource(PracticeNextWordResource, '/practice/sessions/<int:id>/next-word')
+    api.add_resource(PracticeSummaryResource, '/practice/sessions/<int:id>/summary')
 
 def create_app(config_class=None):
     app = Flask(__name__)
