@@ -101,3 +101,19 @@ export interface PracticeSummaryResponse {
   words_skipped: number
   word_results: WordResult[]
 }
+
+// Progress stats types
+export interface ProgressStats {
+  total_words: number
+  words_practiced_today: number
+  mastery_percentage: number
+  words_ready_for_review: number
+}
+
+// Settings types
+export interface UserSettings {
+  preferred_name: string | null
+  words_per_session: number | null
+  deepseek_api_key: string | null
+  gemini_api_key: string | null
+}

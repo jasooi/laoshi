@@ -1,21 +1,34 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
+import { progressApi } from '../lib/api'
+import type { ProgressStats } from '../types/api'
 
 const Home = () => {
   const [totalWords, setTotalWords] = useState(0)
-  const [wordsToday] = useState(0)
-  const [masteryProgress] = useState(0)
+  const [wordsToday, setWordsToday] = useState(0)
+  const [masteryProgress, setMasteryProgress] = useState(0)
   const [wordsWaiting, setWordsWaiting] = useState(0)
+  const [, setStats] = useState<ProgressStats | null>(null)
 
   // Fetch stats from API
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Fetch vocabulary count
         const vocabResponse = await api.get('/api/words', { params: { per_page: 1 } })
         const total = vocabResponse.data.pagination?.total ?? 0
         setTotalWords(total)
-        setWordsWaiting(total)
+
+        // Fetch progress stats
+        const progressResponse = await progressApi.getStats()
+        const data = progressResponse.data
+        setStats(data)
+        
+        // Use default values of 0 if data is missing
+        setMasteryProgress(data.mastery_percentage ?? 0)
+        setWordsToday(data.words_practiced_today ?? 0)
+        setWordsWaiting(data.words_ready_for_review ?? total)
       } catch {
         // 404 = no words yet (expected for new users), 401 = not authenticated
         // Both are fine — defaults are already 0

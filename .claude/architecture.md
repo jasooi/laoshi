@@ -69,7 +69,8 @@ Backend requires `.env` file with:
 
 ## Database Models
 - **Word**: Vocabulary items with `confidence_score` (0-1) and computed `status` property (Mastered >0.9, Reviewing >0.7, Learning >0.3, Needs Revision <=0.3)
-- **User**: Accounts with username, email, password (hashed), preferred_name
+- **User**: Accounts with username, email, password (hashed)
+- **UserProfile**: 1:1 with User. Stores `preferred_name`, `words_per_session`, encrypted API keys (`encrypted_deepseek_api_key`, `encrypted_gemini_api_key`), and key versions (`deepseek_key_version`, `gemini_key_version`) for session invalidation on key changes.
 - **UserSession**: Practice sessions with start/end timestamps, `summary_text`, `words_per_session`
 - **SessionWord**: Links words to sessions with `word_order`, averaged scores (`grammar_score`, `usage_score`, `naturalness_score`), `is_correct`, `is_skipped`. Scores are computed as averages across all attempts when the user clicks "Next Word".
 - **SessionWordAttempt**: Individual sentence attempts per word per session. Stores per-attempt scores from the feedback agent (grammar_score, usage_score, naturalness_score, is_correct, feedback text). Multiple rows per word per session.
@@ -111,6 +112,13 @@ Three agents orchestrated via the OpenAI Agents SDK:
 - `GET /api/users` - List all users (admin only)
 - `GET /api/users/<id>` - Get user info
 - `PUT /api/users/<id>` - Update user
+
+### Settings & Progress
+- `GET /api/settings` - Get user settings (preferred_name, words_per_session, has_deepseek_key, has_gemini_key)
+- `PUT /api/settings` - Update settings (preferred_name, words_per_session)
+- `POST /api/settings/keys/<provider>/validate` - Validate and save API key (provider: deepseek|gemini)
+- `DELETE /api/settings/keys/<provider>` - Clear API key and increment version
+- `GET /api/progress/stats` - Get home page stats (words_practiced_today, mastery_percentage, words_ready_for_review, total_words)
 
 ### Sessions (admin/raw access)
 - `GET /api/sessions` - List all sessions (admin only)

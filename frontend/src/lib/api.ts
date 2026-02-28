@@ -3,6 +3,8 @@ import type {
   PracticeSessionResponse,
   PracticeMessageResponse,
   PracticeSummaryResponse,
+  ProgressStats,
+  UserSettings,
 } from '../types/api'
 
 const api = axios.create({
@@ -131,6 +133,23 @@ export const practiceApi = {
   getSummary: (sessionId: number) =>
     api.get<PracticeSummaryResponse>(
       `/api/practice/sessions/${sessionId}/summary`
+    ),
+}
+
+// Progress stats API helpers
+export const progressApi = {
+  getStats: () => api.get<ProgressStats>('/api/progress/stats'),
+}
+
+// Settings API helpers
+export const settingsApi = {
+  getSettings: () => api.get<UserSettings>('/api/settings'),
+  updateSettings: (settings: Partial<UserSettings>) =>
+    api.put<UserSettings>('/api/settings', settings),
+  validateKey: (provider: 'deepseek' | 'gemini', apiKey: string) =>
+    api.post<{ valid: boolean; error?: string }>(
+      `/api/settings/keys/${provider}/validate`,
+      { api_key: apiKey }
     ),
 }
 

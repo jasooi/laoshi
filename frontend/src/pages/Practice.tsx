@@ -43,6 +43,9 @@ const Practice = () => {
   
   // Summary state
   const [summary, setSummary] = useState<PracticeSummaryResponse | null>(null)
+
+  // Track if current word received feedback (reset on word advance)
+  const [currentWordAttempted, setCurrentWordAttempted] = useState(false)
   
   // Error state
   const [error, setError] = useState<string | null>(null)
@@ -125,7 +128,12 @@ const Practice = () => {
         feedback: data.feedback || undefined,
       }
       setMessages((prev) => [...prev, laoshiMessage])
-      
+
+      // Mark current word as attempted if feedback was returned
+      if (data.feedback) {
+        setCurrentWordAttempted(true)
+      }
+
       // Update progress counts
       setWordsPracticed(data.words_practiced)
       setWordsSkipped(data.words_skipped)
@@ -147,20 +155,20 @@ const Practice = () => {
     if (!sessionId || !currentWord) return
 
     setIsWaiting(true)
-    
-    // Track if current word had attempts before moving
-    const hadAttempts = messages.some(m => m.sender === 'user' && m.feedback)
-    
+
     try {
       const response = await practiceApi.nextWord(sessionId)
       const data = response.data
-      
-      // Update sidebar trays
-      if (hadAttempts) {
+
+      // Update sidebar trays based on whether user attempted this word
+      if (currentWordAttempted) {
         setPracticedWords(prev => [...prev, currentWord])
       } else {
         setSkippedWords(prev => [...prev, currentWord])
       }
+
+      // Reset for next word
+      setCurrentWordAttempted(false)
       
       // Update progress
       setWordsPracticed(data.words_practiced)
@@ -217,6 +225,7 @@ const Practice = () => {
     setPracticedWords([])
     setSkippedWords([])
     setSummary(null)
+    setCurrentWordAttempted(false)
     setError(null)
     
     // Trigger re-initialization

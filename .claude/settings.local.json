@@ -12,7 +12,20 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJmcmVzaCI6ZmFsc2UsImlhdCI6MTc3MDk2NzYyMiwianRpIjoiMGI1MGQ3MGUtY2RmZi00OGNlLWIyMzItYTM3YmI4OTkxMzVhIiwidHlwZSI6ImFjY2VzcyIsInN1YiI6IjMiLCJuYmYiOjE3NzA5Njc2MjIsImNzcmYiOiI4NGUzYWU0Yy1hYjJmLTQ3NzgtOTEwMS1iYmJmYjMzY2ZiNmQiLCJleHAiOjE3NzA5Njg1MjJ9.e_aaQm2oGUUo4VriMLJiwYT3K74AkIZBqcM0g2i7ags\")",
       "Bash(ls:*)",
       "Bash(node -e \"const { exec } = require\\(''child_process''\\); const p = exec\\(''npx vitest run --reporter=dot''\\); let out=''''; p.stdout.on\\(''data'',d=>{out+=d;process.stdout.write\\(d\\)}\\); p.stderr.on\\(''data'',d=>{out+=d;process.stderr.write\\(d\\)}\\); setTimeout\\(\\(\\)=>{console.log\\(''\\\\n--- TIMEOUT: force exit ---''\\); p.kill\\(\\); process.exit\\(out.includes\\(''FAIL''\\) ? 1 : 0\\)}, 30000\\);\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(laoshivenvScriptspython -c \"import certifi; print\\(certifi.where\\(\\)\\)\")",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"import certifi; print\\(certifi.where\\(\\)\\)\")",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"import ssl; ctx = ssl.create_default_context\\(\\); print\\(''SSL OK''\\)\")",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"import ssl, certifi; ctx = ssl.create_default_context\\(cafile=certifi.where\\(\\)\\); print\\(''certifi SSL OK''\\)\")",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"from openai import AsyncOpenAI; c = AsyncOpenAI\\(base_url=''https://generativelanguage.googleapis.com/v1beta/openai/'', api_key=''test''\\); print\\(''gemini client OK''\\)\")",
+      "Bash(\"c:\\\\Users\\\\Jasmine\\\\Desktop\\\\learningScripts\\\\laoshi-coach\\\\laoshi\\\\laoshivenv\\\\Scripts\\\\python\" app.py)",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"from dotenv import load_dotenv; load_dotenv\\(''.env''\\); import os; uri = os.getenv\\(''REDIS_URI'', ''NOT SET''\\); print\\(''REDIS_URI:'', uri\\)\")",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"from agents.items import ToolCallOutputItem; help\\(ToolCallOutputItem.output\\)\")",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"\nfrom agents.items import ToolCallOutputItem\nimport inspect\nprint\\(inspect.getsource\\(ToolCallOutputItem\\)\\)\n\")",
+      "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/test_practice_runner.py -v)",
+      "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/ -v)",
+      "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/test_practice_api.py -v)",
+      "Bash(\"laoshivenv/Scripts/python\" -c \"\nfrom agents.extensions.memory import RedisSession\nimport inspect\nprint\\(inspect.getsource\\(RedisSession\\)\\)\n\")"
     ]
   }
 }
