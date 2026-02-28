@@ -30,3 +30,7 @@ python-dotenv>=1.0.0
 # Testing
 pytest>=7.0.0
 
+# Security & Rate Limiting
+cryptography>=42.0.0
+Flask-Limiter>=3.5.0
+

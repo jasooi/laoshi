@@ -145,28 +145,29 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False, unique=True)
     email = db.Column(db.String(200), nullable=False, unique=True)
     password = db.Column(db.String(200))
-    preferred_name = db.Column(db.String(80))
     created_ds = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
 
     words = db.relationship('Word', back_populates='user')
     sessions = db.relationship('UserSession', back_populates='user')
+    profile = db.relationship('UserProfile', uselist=False, back_populates='user', lazy='joined')
 
     def __repr__(self):
-        return f"{self.id} - {self.preferred_name}"
-    
+        name = (self.profile.preferred_name if self.profile else None) or self.username
+        return f"{self.id} - {name}"
+
     def format_data(self, viewer=None):
         # viewer should be the User object of the logged in user
         if viewer is None:
             return {
                 'id': self.id
-            } 
+            }
 
         if viewer.id == self.id or viewer.is_admin == True:
                 return {
                     'id': self.id,
                     'username': self.username,
-                    'preferred_name': self.preferred_name
+                    'preferred_name': (self.profile.preferred_name if self.profile else None)
                 }
         else:
             return {
@@ -223,7 +224,7 @@ class User(db.Model):
             return False
         if email.count('@') != 1:
             return False
-        
+
         local, domain = email.split("@")
         if not local or not domain:
             return False
@@ -231,12 +232,66 @@ class User(db.Model):
             return False
         if domain.startswith(".") or domain.endswith("."):
             return False
-        
+
         # Check if email already exists in database
         email_query = email.lower()
         existing_user = cls.query.filter(cls.email.ilike(email_query)).first()
         return existing_user is None
-    
+
+
+class UserProfile(db.Model):
+    __tablename__ = 'user_profile'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    preferred_name = db.Column(db.String(80), nullable=True)
+    words_per_session = db.Column(db.Integer, nullable=True)
+    encrypted_deepseek_api_key = db.Column(db.Text, nullable=True)
+    encrypted_gemini_api_key = db.Column(db.Text, nullable=True)
+    deepseek_key_version = db.Column(db.Integer, default=1)
+    gemini_key_version = db.Column(db.Integer, default=1)
+    created_ds = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', back_populates='profile')
+
+    def format_settings(self):
+        return {
+            'preferred_name': self.preferred_name,
+            'words_per_session': self.words_per_session,
+            'has_deepseek_key': self.encrypted_deepseek_api_key is not None,
+            'has_gemini_key': self.encrypted_gemini_api_key is not None,
+        }
+
+    def increment_key_version(self, provider: str):
+        """Increment the key version for the specified provider."""
+        if provider == 'deepseek':
+            self.deepseek_key_version += 1
+        elif provider == 'gemini':
+            self.gemini_key_version += 1
+        else:
+            raise ValueError(f"Invalid provider: {provider}")
+
+    def add(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    def update(self):
+        try:
+            self.updated_ds = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    @classmethod
+    def get_by_user_id(cls, user_id):
+        return cls.query.filter_by(user_id=user_id).first()
+
 
 class UserSession(db.Model):
     __tablename__ = 'user_session'
@@ -252,7 +307,8 @@ class UserSession(db.Model):
     session_words = db.relationship('SessionWord', back_populates='user_session')
 
     def __repr__(self):
-        return f"session {self.id} of user {self.user.preferred_name}"
+        preferred_name = (self.user.profile.preferred_name if self.user.profile else None) or self.user.username
+        return f"session {self.id} of user {preferred_name}"
     
     def format_data(self, viewer=None):
         # If no viewer, return None (access denied at model level)

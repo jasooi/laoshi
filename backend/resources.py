@@ -15,13 +15,16 @@ from flask_jwt_extended import (
 )
 from sqlalchemy.exc import IntegrityError
 import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def validate_password(password: str) -> tuple[bool, str]:
     """
     Validate password meets security requirements.
     Returns (is_valid, error_message).
-    
+
     Requirements:
     - At least 8 characters
     - At least one uppercase letter
@@ -31,20 +34,37 @@ def validate_password(password: str) -> tuple[bool, str]:
     """
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
-    
+
     if not re.search(r'[A-Z]', password):
         return False, "Password must contain at least one uppercase letter"
-    
+
     if not re.search(r'[a-z]', password):
         return False, "Password must contain at least one lowercase letter"
-    
+
     if not re.search(r'\d', password):
         return False, "Password must contain at least one number"
-    
+
     if not re.match(r'^[a-zA-Z0-9]+$', password):
         return False, "Password must contain only letters and numbers"
-    
+
     return True, ""
+
+
+# Word field length limits matching database column sizes
+WORD_FIELD_LIMITS = {
+    'word': 150,
+    'pinyin': 150,
+    'meaning': 300,
+    'source_name': 200,
+}
+
+
+def validate_word_fields(data: dict) -> str | None:
+    """Validate word field lengths. Returns error message if invalid, None if OK."""
+    for field, max_len in WORD_FIELD_LIMITS.items():
+        if field in data and isinstance(data[field], str) and len(data[field]) > max_len:
+            return f"'{field}' must be at most {max_len} characters"
+    return None
 
 class WordListResource(Resource):
 
@@ -93,6 +113,10 @@ class WordListResource(Resource):
             for key in ("word", "pinyin", "meaning"):
                 if key not in item or not item[key]:
                     return {"error": f"Row {i+1} is missing required field: {key}"}, 400
+            # Validate field lengths
+            err = validate_word_fields(item)
+            if err:
+                return {"error": f"Row {i+1}: {err}"}, 400
 
         vc_user = User.get_by_id(int(get_jwt_identity()))
 
@@ -105,9 +129,10 @@ class WordListResource(Resource):
             Word.add_list(words_list)
         except IntegrityError:
             return {"error": "Invalid user_id - user does not exist"}, 400
-        except Exception as e:
-            return {"error": str(e)}, 500
-        
+        except Exception:
+            logger.exception("Error creating words")
+            return {"error": "An internal error occurred"}, 500
+
         # Format data after commit so ids are populated
         added_words_list_json = [word.format_data(vc_user) for word in words_list]
         return {"created_data": added_words_list_json}, HTTPStatus.CREATED
@@ -152,6 +177,11 @@ class WordResource(Resource):
         if not data:
             return {"error": "No data provided"}, 400
 
+        # Validate field lengths
+        err = validate_word_fields(data)
+        if err:
+            return {"error": err}, 400
+
         allowable_fields = ["word", "pinyin", "meaning", "confidence_score", "source_name"]
         fields_to_update = [k for k in data.keys() if k in allowable_fields]
 
@@ -159,8 +189,9 @@ class WordResource(Resource):
             return {"error": "Invalid update parameters"}, 400
         try:
             found_word = Word.get_by_id(id)
-        except Exception as e:
-            return {"error": str(e)}, 500
+        except Exception:
+            logger.exception("Error fetching word")
+            return {"error": "An internal error occurred"}, 500
 
         if not found_word:
             return {'error': 'word not found'}, HTTPStatus.NOT_FOUND
@@ -177,8 +208,9 @@ class WordResource(Resource):
 
         try:
             found_word.update()
-        except Exception as e:
-            return {"error": str(e)}, 500
+        except Exception:
+            logger.exception("Error updating word")
+            return {"error": "An internal error occurred"}, 500
 
         return found_word.format_data(vc_user), HTTPStatus.OK
 
@@ -208,9 +240,11 @@ class WordResource(Resource):
         
 
 class UserListResource(Resource):
+    from extensions import limiter
+
     @jwt_required()
     def get(self):
-        
+
         vc_user = User.get_by_id(int(get_jwt_identity()))
 
         if not vc_user.is_admin:
@@ -219,14 +253,16 @@ class UserListResource(Resource):
         try:
             users_list = User.get_full_list()
         except Exception as e:
-            return {"error": str(e)}, 500
-        
+            logger.exception("Error fetching user list")
+            return {"error": "An internal error occurred"}, 500
+
         if not users_list:
             return {'error': 'no users found'}, HTTPStatus.NOT_FOUND
         users_list_json = [u.format_data(vc_user) for u in users_list]
         return users_list_json, 200
 
 
+    @limiter.limit("5 per minute")
     def post(self):
         # Users can only be created one at a time
         data = request.get_json()
@@ -238,32 +274,39 @@ class UserListResource(Resource):
         try:
             username = data['username']
             email = data['email']
+            password = data['password']
         except KeyError:
-            return {"error": "Email and Username are required"}, 400
+            return {"error": "Username, email, and password are required"}, 400
 
-        # optional fields - use dict.get() to default to None if not found
-        preferred_name = data.get('preferred_name')
-        non_hash_password = data.get('password')
-        
-        # Validate password
-        is_password_valid, password_error = validate_password(non_hash_password)
+        # Validate field lengths
+        if not username or len(username) < 3 or len(username) > 80:
+            return {"error": "Username must be 3-80 characters"}, 400
+        if not email or len(email) > 200:
+            return {"error": "Email must be at most 200 characters"}, 400
+        if not password or len(password) < 8 or len(password) > 200:
+            return {"error": "Password must be 8-200 characters"}, 400
+
+        # Validate password complexity
+        is_password_valid, password_error = validate_password(password)
         if not is_password_valid:
             return {"error": password_error}, 400
-        
-        hashed_password = hash_password(non_hash_password)
+
+        hashed_password = hash_password(password)
 
         if not User.is_email_valid(email):
             return {"error": "Email invalid or already registered"}, 400
         if not User.is_username_valid(username):
             return {"error": "Username invalid or already registered"}, 400
-        
+
         current_ds = datetime.now()
-        user_to_add = User(username=username, email=email, password=hashed_password, preferred_name=preferred_name, created_ds=current_ds)
-        
+        # Note: preferred_name is now on UserProfile, not User
+        user_to_add = User(username=username, email=email, password=hashed_password, created_ds=current_ds)
+
         try:
             user_to_add.add()
-        except Exception as e:
-            return {"error": str(e)}, 500
+        except Exception:
+            logger.exception("Error creating user")
+            return {"error": "An internal error occurred"}, 500
 
         return {"created_data": user_to_add.format_data()}, HTTPStatus.CREATED
     
@@ -291,13 +334,15 @@ class UserResource(Resource):
         if not data:
             return {"error": "No data provided"}, 400
 
-        allowable_fields = ["username", "email", "password", "preferred_name"]
+        # Note: preferred_name is now managed via UserProfile, not User
+        allowable_fields = ["username", "email", "password"]
         fields_to_update = [k for k in data.keys() if k in allowable_fields]
 
         try:
             found_user = User.get_by_id(id)
-        except Exception as e:
-            return {"error": str(e)}, 500
+        except Exception:
+            logger.exception("Error fetching user")
+            return {"error": "An internal error occurred"}, 500
 
         if not found_user:
             return {'error': 'user not found'}, HTTPStatus.NOT_FOUND
@@ -307,16 +352,30 @@ class UserResource(Resource):
             return {'error': 'Forbidden'}, HTTPStatus.FORBIDDEN
 
         for field in fields_to_update:
-            if field == "username" and not User.is_username_valid(data[field]):
-                return {"error": "Username invalid or already registered"}, 400
-            if field == "email" and not User.is_email_valid(data[field]):
-                return {"error": "Email invalid or already registered"}, 400
-            setattr(found_user, field, data[field])
+            if field == "username":
+                if not User.is_username_valid(data[field]):
+                    return {"error": "Username invalid or already registered"}, 400
+                found_user.username = data[field]
+            elif field == "email":
+                if not User.is_email_valid(data[field]):
+                    return {"error": "Email invalid or already registered"}, 400
+                found_user.email = data[field]
+            elif field == "password":
+                # Validate password length
+                pwd = data[field]
+                if not pwd or len(pwd) < 8 or len(pwd) > 200:
+                    return {"error": "Password must be 8-200 characters"}, 400
+                # Validate password complexity and hash it
+                is_valid, error_msg = validate_password(pwd)
+                if not is_valid:
+                    return {"error": error_msg}, 400
+                found_user.password = hash_password(pwd)
 
         try:
             found_user.update()
-        except Exception as e:
-            return {"error": str(e)}, 500
+        except Exception:
+            logger.exception("Error updating user")
+            return {"error": "An internal error occurred"}, 500
 
         return {"updated_data": found_user.format_data(vc_user)}, HTTPStatus.OK
             
@@ -539,6 +598,9 @@ class HomeResource(Resource):
 
 class TokenResource(Resource):
     # This is the login endpoint
+    from extensions import limiter
+
+    @limiter.limit("5 per minute")
     def post(self):
         data = request.get_json()
         username = data.get('username')
@@ -565,6 +627,9 @@ class TokenResource(Resource):
     
 
 class TokenRefreshResource(Resource):
+    from extensions import limiter
+
+    @limiter.limit("10 per minute")
     @jwt_required(refresh=True)
     def post(self):
         """Issue a new access token + rotated refresh token."""

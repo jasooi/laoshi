@@ -6,6 +6,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import User, UserSession, SessionWord
 from ai_layer.practice_runner import initialize_session, handle_message, advance_word
 
+# Maximum message length to prevent abuse
+MAX_MESSAGE_LENGTH = 2000
+
 
 class PracticeSessionResource(Resource):
     @jwt_required()
@@ -14,6 +17,11 @@ class PracticeSessionResource(Resource):
         data = request.get_json(silent=True) or {}
         words_count = data.get('words_count')
 
+        # Validate words_count if provided
+        if words_count is not None:
+            if not isinstance(words_count, int) or words_count < 1 or words_count > 50:
+                return {'error': 'words_count must be an integer between 1 and 50'}, 400
+
         result, error = initialize_session(user_id, words_count)
         if error:
             return {'error': error}, 400
@@ -21,6 +29,9 @@ class PracticeSessionResource(Resource):
 
 
 class PracticeMessageResource(Resource):
+    from extensions import limiter
+
+    @limiter.limit("30 per minute")
     @jwt_required()
     def post(self, id):
         user_id = int(get_jwt_identity())
@@ -28,7 +39,11 @@ class PracticeMessageResource(Resource):
         if not data or not data.get('message'):
             return {'error': 'Message is required'}, 400
 
-        result, error = handle_message(id, user_id, data['message'])
+        message = data['message']
+        if len(message) > MAX_MESSAGE_LENGTH:
+            return {'error': f'Message must be at most {MAX_MESSAGE_LENGTH} characters'}, 400
+
+        result, error = handle_message(id, user_id, message)
         if error:
             status = 404 if 'not found' in error.lower() else 400
             return {'error': error}, status

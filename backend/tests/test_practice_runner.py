@@ -121,8 +121,10 @@ class TestHydrateContext:
         # Mock user
         user = Mock()
         user.id = 1
-        user.preferred_name = "TestUser"
         user.username = "testuser"
+        # Mock profile with preferred_name
+        user.profile = Mock()
+        user.profile.preferred_name = "TestUser"
 
         # Mock session
         session = Mock()
@@ -157,7 +159,9 @@ class TestHydrateContext:
         """Should correctly count practiced and skipped words."""
         user = Mock()
         user.id = 1
-        user.preferred_name = "TestUser"
+        user.username = "testuser"
+        user.profile = Mock()
+        user.profile.preferred_name = "TestUser"
 
         session = Mock()
         session.id = 10
@@ -211,7 +215,9 @@ class TestHydrateContext:
         """Should mark session_complete when all words are processed."""
         user = Mock()
         user.id = 1
-        user.preferred_name = "TestUser"
+        user.username = "testuser"
+        user.profile = Mock()
+        user.profile.preferred_name = "TestUser"
 
         session = Mock()
         session.id = 10

@@ -35,6 +35,13 @@ class Config():
     # Practice session settings
     DEFAULT_WORDS_PER_SESSION = 10
 
+    # Encryption for BYOK API keys
+    ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
+
+    # Rate limiting - use memory storage to avoid Redis connection issues
+    RATELIMIT_STORAGE_URI = 'memory://'
+    RATELIMIT_STRATEGY = 'fixed-window'
+
 
 class TestConfig(Config):
     TESTING = True
@@ -43,4 +50,7 @@ class TestConfig(Config):
     JWT_SECRET_KEY = 'test-secret-key'
     JWT_COOKIE_SECURE = False  # Allow HTTP in tests
     DEFAULT_WORDS_PER_SESSION = 5  # Smaller for faster tests
+    # Valid Fernet key for deterministic tests (32 bytes base64-encoded)
+    ENCRYPTION_KEY = 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkwMTIzNDU2Nzg5MA=='
+    RATELIMIT_ENABLED = False  # Disable rate limiting in tests
 

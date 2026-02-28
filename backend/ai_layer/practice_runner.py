@@ -1,6 +1,7 @@
 """Practice session runner - core app code for AI-coached practice sessions."""
 import asyncio
 import json
+import logging
 import os
 from datetime import datetime
 from statistics import mean
@@ -10,9 +11,12 @@ from agents.extensions.memory import RedisSession
 
 from models import Word, User, UserSession, SessionWord, SessionWordAttempt
 from ai_layer.context import UserSessionContext, WordContext
-from ai_layer.chat_agents import laoshi_agent
+from ai_layer.chat_agents import laoshi_agent, summary_agent, build_agents
 from ai_layer.mem0_setup import mem0_client
+from crypto_utils import decrypt_api_key
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 def run_async(coro):
@@ -58,16 +62,65 @@ def get_session(session_id: int):
     """Create a RedisSession for the given practice session.
     
     Uses Redis-backed session storage for persistence across requests.
-    Falls back to in-memory if Redis URI is not configured.
+    Falls back to in-memory if Redis URI is not configured or connection fails.
     """
     redis_url = os.getenv("REDIS_URI")
     if redis_url:
-        return RedisSession.from_url(
-            session_id=f"session:{session_id}",
-            url=redis_url
-        )
-    # Fallback: return None to use default session behavior
+        redis_kwargs = {
+            "socket_connect_timeout": 10,
+            "socket_keepalive": True,
+        }
+        
+        try:
+            return RedisSession.from_url(
+                session_id=f"session:{session_id}",
+                url=redis_url,
+                redis_kwargs=redis_kwargs
+            )
+        except Exception as e:
+            logger.warning(
+                f"Redis connection failed (session_id={session_id}). "
+                f"Using in-memory session. Error: {type(e).__name__}: {e}"
+            )
+            return None
+    # Fallback: return None to use default in-memory session behavior
     return None
+
+
+def get_user_agent(user, session_ds_version=None, session_gemini_version=None):
+    """Get the appropriate agents for the user (custom BYOK keys or default).
+
+    Checks key versions to detect mid-session key changes.
+    Returns (orchestrator_agent, summary_agent, current_ds_version, current_gemini_version).
+    """
+    if not user.profile:
+        return laoshi_agent, summary_agent, 1, 1
+
+    ds_key = None
+    gemini_key = None
+
+    if user.profile.encrypted_deepseek_api_key:
+        ds_key = decrypt_api_key(user.profile.encrypted_deepseek_api_key)
+    if user.profile.encrypted_gemini_api_key:
+        gemini_key = decrypt_api_key(user.profile.encrypted_gemini_api_key)
+
+    current_ds_version = user.profile.deepseek_key_version
+    current_gemini_version = user.profile.gemini_key_version
+
+    # Check if keys changed mid-session
+    ds_changed = (session_ds_version is not None and
+                  session_ds_version != current_ds_version)
+    gemini_changed = (session_gemini_version is not None and
+                      session_gemini_version != current_gemini_version)
+
+    if ds_changed or gemini_changed:
+        logger.info(f"Key version change detected: ds={ds_changed}, gemini={gemini_changed}")
+
+    if not ds_key and not gemini_key:
+        return laoshi_agent, summary_agent, current_ds_version, current_gemini_version
+
+    orch, summ = build_agents(deepseek_api_key=ds_key, gemini_api_key=gemini_key)
+    return orch, summ, current_ds_version, current_gemini_version
 
 
 def hydrate_context(user, session, session_words, mem0_prefs=None):
@@ -101,10 +154,15 @@ def hydrate_context(user, session, session_words, mem0_prefs=None):
 
     session_complete = all(v != 0 for v in session_word_dict.values())
 
+    # Get preferred_name from UserProfile if available, fallback to username
+    preferred_name = user.username
+    if user.profile and user.profile.preferred_name:
+        preferred_name = user.profile.preferred_name
+
     return UserSessionContext(
         user_id=user.id,
         session_id=session.id,
-        preferred_name=user.preferred_name or user.username,
+        preferred_name=preferred_name,
         current_word=current_word,
         session_word_dict=session_word_dict,
         words_practiced=words_practiced,
@@ -116,6 +174,34 @@ def hydrate_context(user, session, session_words, mem0_prefs=None):
     )
 
 
+def _parse_json_from_string(text: str) -> dict | None:
+    """Extract JSON object from a string that may contain markdown fences or surrounding text."""
+    # Try direct parse first
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Strip markdown code fences (```json ... ``` or ``` ... ```)
+    import re
+    fence_match = re.search(r'```(?:json)?\s*\n?(.*?)\n?\s*```', text, re.DOTALL)
+    if fence_match:
+        try:
+            return json.loads(fence_match.group(1).strip())
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Last resort: find first { ... } block
+    brace_match = re.search(r'\{.*\}', text, re.DOTALL)
+    if brace_match:
+        try:
+            return json.loads(brace_match.group(0))
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return None
+
+
 def extract_feedback_from_result(result):
     """
     Parse feedback JSON from result.new_items tool call outputs.
@@ -123,19 +209,18 @@ def extract_feedback_from_result(result):
     Returns validated dict or None.
     """
     from agents.items import ToolCallOutputItem
-    
+
     for item in result.new_items:
         if isinstance(item, ToolCallOutputItem):
-            # Check if this is from the evaluate_sentence tool
-            # The output contains the agent's response (feedback_agent's output)
             try:
                 output = item.output
                 if isinstance(output, dict):
                     return validate_feedback(output)
                 elif isinstance(output, str):
-                    data = json.loads(output)
-                    return validate_feedback(data)
-            except (json.JSONDecodeError, TypeError, AttributeError):
+                    data = _parse_json_from_string(output)
+                    if data:
+                        return validate_feedback(data)
+            except (TypeError, AttributeError):
                 continue
     return None
 
@@ -158,9 +243,12 @@ def initialize_session(user_id: int, words_count: int | None = None):
     if not user:
         return None, "User not found"
 
-    # Resolve word count
+    # Resolve word count - check user profile first, then fallback to config default
     if words_count is None:
-        words_count = Config.DEFAULT_WORDS_PER_SESSION
+        if user.profile and user.profile.words_per_session:
+            words_count = user.profile.words_per_session
+        else:
+            words_count = Config.DEFAULT_WORDS_PER_SESSION
 
     # Select eligible words (confidence < 0.9)
     eligible_words = Word.query.filter_by(user_id=user_id).filter(
@@ -208,12 +296,15 @@ def initialize_session(user_id: int, words_count: int | None = None):
     session_words = SessionWord.get_list_by_session_id(session.id)
     ctx = hydrate_context(user, session, session_words, mem0_prefs)
 
+    # Get user-specific agent (with BYOK support) and store key versions
+    agent, _, ds_ver, gemini_ver = get_user_agent(user)
+
     # Generate greeting
     session_obj = get_session(session.id)
     result = run_async(run_with_retry(
-        laoshi_agent, 
-        input="Start the session. Greet the student and introduce the first word.", 
-        context=ctx, 
+        agent,
+        input="Start the session. Greet the student and introduce the first word.",
+        context=ctx,
         session=session_obj
     ))
 
@@ -253,10 +344,13 @@ def handle_message(session_id: int, user_id: int, message: str):
     if ctx.current_word is None:
         return None, "No active word in session"
 
+    # Get user-specific agent (with BYOK support and version tracking)
+    agent, _, ds_ver, gemini_ver = get_user_agent(user)
+
     # Run orchestrator
     session_obj = get_session(session_id)
     result = run_async(run_with_retry(
-        laoshi_agent, input=message, context=ctx, session=session_obj
+        agent, input=message, context=ctx, session=session_obj
     ))
 
     laoshi_response = result.final_output if hasattr(result, 'final_output') else str(result)
@@ -363,11 +457,14 @@ def advance_word(session_id: int, user_id: int):
             return None, err
         return result, None
 
+    # Get user-specific agent (with BYOK support and version tracking)
+    agent, _, ds_ver, gemini_ver = get_user_agent(user)
+
     # Introduce next word
     session_obj = get_session(session_id)
     next_word_msg = f"The student has moved to the next word. Introduce it: {ctx.current_word.word} ({ctx.current_word.pinyin}) - {ctx.current_word.meaning}"
     result = run_async(run_with_retry(
-        laoshi_agent, input=next_word_msg, context=ctx, session=session_obj
+        agent, input=next_word_msg, context=ctx, session=session_obj
     ))
 
     laoshi_response = result.final_output if hasattr(result, 'final_output') else str(result)
@@ -389,7 +486,7 @@ def advance_word(session_id: int, user_id: int):
 
 
 def complete_session(session_id: int, user_id: int):
-    """Complete a practice session: generate summary via handoff, write mem0, close session."""
+    """Complete a practice session: generate summary directly via summary agent."""
     user = User.get_by_id(user_id)
     session = UserSession.get_by_id(session_id)
 
@@ -398,25 +495,26 @@ def complete_session(session_id: int, user_id: int):
 
     session_words = SessionWord.get_list_by_session_id(session_id)
     ctx = hydrate_context(user, session, session_words)
-    ctx.session_complete = True  # This triggers handoff instruction in prompt
+    ctx.session_complete = True
 
-    # Trigger summary via orchestrator -> summary agent handoff
-    # The orchestrator sees session_complete=True and hands off automatically
+    # Get user-specific summary agent (with BYOK support)
+    _, summ_agent, ds_ver, gemini_ver = get_user_agent(user)
+
+    # Run summary agent directly (no handoff needed)
     session_obj = get_session(session_id)
     try:
         result = run_async(run_with_retry(
-            laoshi_agent,
-            input="Session complete. Generate summary.",  # Minimal input, agent uses context
+            summ_agent,
+            input="Generate session summary.",
             context=ctx,
             session=session_obj
         ))
 
-        # When handoff occurs, result comes from summary agent
         summary_text = result.final_output if hasattr(result, 'final_output') else str(result)
 
         # Try to parse as JSON for structured summary
-        try:
-            summary_data = json.loads(summary_text)
+        summary_data = _parse_json_from_string(summary_text)
+        if summary_data:
             validated = validate_summary(summary_data)
             if validated:
                 summary_text = validated['summary_text']
@@ -426,8 +524,6 @@ def complete_session(session_id: int, user_id: int):
                         mem0_client.add(update, user_id=str(user_id))
                     except Exception:
                         pass  # mem0 write failure shouldn't block session close
-        except (json.JSONDecodeError, TypeError):
-            pass  # Use raw text as summary
 
     except Exception:
         summary_text = "Session completed. Keep practicing!"

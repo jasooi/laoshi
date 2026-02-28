@@ -114,6 +114,7 @@ class TestPracticeSessionAPI:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
             mock_result.raw_responses = []
+            mock_result.new_items = []
             mock_run.return_value = mock_result
 
             resp = client.post('/api/practice/sessions', headers=auth_headers)
@@ -157,6 +158,7 @@ class TestPracticeSessionAPI:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
             mock_result.raw_responses = []
+            mock_result.new_items = []
             mock_run.return_value = mock_result
 
             resp = client.post('/api/practice/sessions', headers=auth_headers)
@@ -184,6 +186,7 @@ class TestPracticeSessionAPI:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
             mock_result.raw_responses = []
+            mock_result.new_items = []
             mock_run.return_value = mock_result
 
             resp = client.post('/api/practice/sessions', headers=auth_headers)
@@ -240,6 +243,7 @@ class TestPracticeSessionErrors:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
             mock_result.raw_responses = []
+            mock_result.new_items = []
             mock_run.return_value = mock_result
         
             resp = client.post('/api/practice/sessions', headers=auth_headers)

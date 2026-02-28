@@ -1,13 +1,10 @@
+"""Chat service for AI-powered conversations.
+
+NOTE: This module previously created a RedisSession at import time with a hardcoded
+session ID. This has been removed. Use practice_runner.get_session(session_id) 
+to get a properly scoped session for each practice session.
+"""
 from mem0_setup import mem0_client
-import redis
-from agents.extensions.memory import RedisSession
-from dotenv import load_dotenv
-import os
-load_dotenv('C:/Users/Jasmine/Desktop/learningScripts/laoshi-coach/laoshi/.env')
 
-
-
-session = RedisSession.from_url(
-    "user_123",
-    url=os.getenv("REDIS_URI"),
-)
+# Redis session creation removed - sessions should be created per-practice-session
+# with dynamic session IDs. Use practice_runner.get_session(session_id) instead.
