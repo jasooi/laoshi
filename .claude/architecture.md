@@ -19,10 +19,28 @@
 - mem0 (`mem0ai`) - cross-session persistent user memory
 - Redis - session-scoped conversation history (via SDK's `RedisSession`)
 
-## API Proxy
-Vite proxies `/api/*` requests to `http://localhost:5000` during development.
+## Networking
+
+### Local Development
+Vite dev server proxies `/api/*` requests to `http://localhost:5000` (configured in `vite.config.ts`).
+
+### Production
+Nginx reverse proxy (`laoshi-gateway`) acts as the single public entry point, routing `/api/*` to the backend service and `/*` to the frontend service.
+
+```
+gateway/
+├── nginx.conf    # Routes /api/* → backend, /* → frontend
+└── Dockerfile    # nginx:alpine with custom config
+```
 
 ## Repository Structure
+### Gateway
+```
+gateway/
+├── nginx.conf      # Reverse proxy routing rules
+└── Dockerfile      # nginx:alpine container
+```
+
 ### Frontend
 ```
 frontend/src/

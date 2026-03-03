@@ -19,7 +19,7 @@ def register_extensions(app):
     db.init_app(app)
     migrate = Migrate(app, db)
     jwt.init_app(app)
-    CORS(app, supports_credentials=True)
+    CORS(app)
     limiter.init_app(app)
     # Set default rate limits
     limiter.default_limits = ["200 per minute"]
