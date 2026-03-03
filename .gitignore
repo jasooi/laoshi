@@ -1,5 +1,6 @@
 # general
 .env
+Dockerfile
 
 # Logs
 logs
