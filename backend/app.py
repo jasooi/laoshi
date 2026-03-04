@@ -2,6 +2,8 @@
 
 # Import libraries
 import os
+import logging
+import sys
 from flask import Flask
 from flask_restful import Api
 from flask_migrate import Migrate
@@ -37,7 +39,8 @@ def register_extensions(app):
     
 
 def register_resources(app):
-    api = Api(app, prefix='/api')
+    app.config['PROPAGATE_EXCEPTIONS'] = True
+    api = Api(app, prefix='/api', errors={})
     api.add_resource(WordListResource, '/words')
     api.add_resource(WordResource, '/words/<int:id>')
     api.add_resource(UserListResource, '/users')
@@ -70,13 +73,25 @@ def create_app(config_class=None):
         config_class = Config
     app.config.from_object(config_class)
 
+    # Configure logging to stdout so cloud platforms capture it
+    logging.basicConfig(
+        stream=sys.stdout,
+        level=logging.INFO,
+        format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
+    )
+    logger = logging.getLogger(__name__)
+
     # Validate required config
     if not app.config.get('ENCRYPTION_KEY'):
-        import logging
-        logging.warning("ENCRYPTION_KEY is not set. API key encryption will fail.")
+        logger.warning("ENCRYPTION_KEY is not set. API key encryption will fail.")
 
     register_extensions(app)
     register_resources(app)
+
+    @app.errorhandler(Exception)
+    def handle_unhandled_exception(e):
+        logger.exception("Unhandled exception: %s", e)
+        return {"error": "An internal error occurred"}, 500
 
     # Ensure all tables exist before first request
     with app.app_context():
@@ -95,6 +110,7 @@ def create_app(config_class=None):
             # Existing database: apply any pending migrations
             upgrade()
 
+    logger.info("App startup complete. Tables verified.")
     return app
 
 app = create_app()
