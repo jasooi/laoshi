@@ -78,8 +78,20 @@ def create_app(config_class=None):
 
     # Auto-run migrations on startup so tables exist before first request
     with app.app_context():
-        from flask_migrate import upgrade
-        upgrade()
+        from flask_migrate import upgrade, stamp
+        from sqlalchemy import inspect
+
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        if not tables or tables == ['alembic_version']:
+            # Fresh database: create all tables from current models, then
+            # stamp migration head so Alembic knows no migrations need to run
+            db.create_all()
+            stamp(revision='head')
+        else:
+            # Existing database: apply any pending migrations
+            upgrade()
 
     return app
 
