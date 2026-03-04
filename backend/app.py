@@ -1,6 +1,7 @@
 # Main app code for Flask + SQLAlchemy backend implementation
 
 # Import libraries
+import os
 from flask import Flask
 from flask_restful import Api
 from flask_migrate import Migrate
@@ -17,7 +18,8 @@ from config import Config
 
 def register_extensions(app):
     db.init_app(app)
-    migrate = Migrate(app, db)
+    migrations_dir = os.path.join(os.path.dirname(__file__), 'migrations')
+    migrate = Migrate(app, db, directory=migrations_dir)
     jwt.init_app(app)
     CORS(app)
     limiter.init_app(app)
@@ -76,7 +78,7 @@ def create_app(config_class=None):
     register_extensions(app)
     register_resources(app)
 
-    # Auto-run migrations on startup so tables exist before first request
+    # Ensure all tables exist before first request
     with app.app_context():
         from flask_migrate import upgrade, stamp
         from sqlalchemy import inspect
