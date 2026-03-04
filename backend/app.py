@@ -75,6 +75,12 @@ def create_app(config_class=None):
 
     register_extensions(app)
     register_resources(app)
+
+    # Auto-run migrations on startup so tables exist before first request
+    with app.app_context():
+        from flask_migrate import upgrade
+        upgrade()
+
     return app
 
 app = create_app()
