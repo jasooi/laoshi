@@ -110,6 +110,37 @@ export interface ProgressStats {
   words_ready_for_review: number
 }
 
+// Report Card types
+export interface ReportCardTopline {
+  time_practiced_hours: number
+  sessions_completed: number
+  words_practiced: number
+}
+
+export interface DailyChartData {
+  date: string
+  correct: number
+  incorrect: number
+}
+
+export interface ScoreDetail {
+  score: number | null
+  description: string | null
+}
+
+export interface ScoreBreakdown {
+  grammar: ScoreDetail
+  usage: ScoreDetail
+  naturalness: ScoreDetail
+}
+
+export interface ReportCardData {
+  topline: ReportCardTopline
+  chart_data: DailyChartData[]
+  score_breakdown: ScoreBreakdown
+  teacher_feedback: string | null
+}
+
 // Settings types
 export interface UserSettings {
   preferred_name: string | null

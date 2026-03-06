@@ -14,6 +14,7 @@ from resources import WordListResource, WordResource, UserListResource, UserReso
 from practice_resources import PracticeSessionResource, PracticeMessageResource, PracticeNextWordResource, PracticeSummaryResource
 from progress_resources import ProgressStatsResource
 from settings_resources import UserSettingsResource, UserSettingsKeyResource, UserSettingsKeyValidateResource
+from report_card_resources import ReportCardResource, GenerateFeedbackResource
 from models import TokenBlocklist
 from config import Config
 
@@ -66,6 +67,10 @@ def register_resources(app):
     api.add_resource(UserSettingsResource, '/settings')
     api.add_resource(UserSettingsKeyResource, '/settings/keys/<string:provider>')
     api.add_resource(UserSettingsKeyValidateResource, '/settings/keys/<string:provider>/validate')
+
+    # Report card endpoints
+    api.add_resource(ReportCardResource, '/progress/report-card')
+    api.add_resource(GenerateFeedbackResource, '/progress/generate-feedback')
 
 def create_app(config_class=None):
     app = Flask(__name__)

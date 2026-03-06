@@ -250,6 +250,7 @@ class UserProfile(db.Model):
     encrypted_gemini_api_key = db.Column(db.Text, nullable=True)
     deepseek_key_version = db.Column(db.Integer, default=1)
     gemini_key_version = db.Column(db.Integer, default=1)
+    report_card_feedback = db.Column(db.Text, nullable=True)
     created_ds = db.Column(db.DateTime, default=datetime.utcnow)
     updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

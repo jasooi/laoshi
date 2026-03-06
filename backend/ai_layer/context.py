@@ -23,3 +23,14 @@ class UserSessionContext:
     session_complete: bool
     mem0_preferences: str | None      # stringified mem0 search results
     word_roster: list[WordContext]     # all session words in word_order
+
+
+@dataclass
+class ReportCardContext:
+    user_id: int
+    preferred_name: str
+    mem0_preferences: str | None
+    recent_summaries: str | None
+    avg_grammar: float
+    avg_usage: float
+    avg_naturalness: float

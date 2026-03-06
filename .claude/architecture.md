@@ -5,6 +5,7 @@
 - Tailwind CSS (purple color scheme, primary: #9333EA)
 - React Router DOM for navigation
 - Axios for HTTP requests
+- Recharts for data visualization (stacked bar charts for Report Card)
 
 ## Backend Stack
 - Flask + Flask-RESTful
@@ -15,7 +16,7 @@
 ## AI Layer Stack
 - OpenAI Agents SDK (`openai-agents`) - multi-agent orchestration
 - DeepSeek API (via OpenAI-compatible client) - feedback agent (sentence evaluation)
-- Gemini Flash API (via OpenAI-compatible client) - orchestrator + summary agents
+- Gemini Flash API (via OpenAI-compatible client) - orchestrator + summary + report card agents
 - mem0 (`mem0ai`) - cross-session persistent user memory
 - Redis - session-scoped conversation history (via SDK's `RedisSession`)
 
@@ -59,12 +60,14 @@ backend/
 ├── models.py           # SQLAlchemy models (Word, User, UserSession, SessionWord, SessionWordAttempt)
 ├── resources.py        # Flask-RESTful endpoints (words, users, sessions, auth)
 ├── practice_resources.py # Flask-RESTful endpoints for practice session flow
+├── report_card_resources.py # Flask-RESTful endpoints for report card (GET report-card, POST generate-feedback)
+├── report_card_service.py  # Business logic for report card metrics, chart data, scores, AI feedback
 ├── extensions.py       # Flask extensions (db, jwt)
 ├── config.py           # Configuration from .env
 ├── utils.py            # Helpers (password hashing, pagination, filters)
 └── ai_layer/
-    ├── context.py          # UserSessionContext and WordContext dataclasses
-    ├── chat_agents.py      # Agent definitions (orchestrator, feedback, summary)
+    ├── context.py          # UserSessionContext, WordContext, and ReportCardContext dataclasses
+    ├── chat_agents.py      # Agent definitions (orchestrator, feedback, summary, report card)
     ├── practice_runner.py  # Core app code: session init, per-turn handling, score computation
     ├── mem0_setup.py       # mem0 MemoryClient initialization and custom categories
     ├── chat_service.py     # Redis session setup
@@ -88,20 +91,21 @@ Backend requires `.env` file with:
 ## Database Models
 - **Word**: Vocabulary items with `confidence_score` (0-1) and computed `status` property (Mastered >0.9, Reviewing >0.7, Learning >0.3, Needs Revision <=0.3)
 - **User**: Accounts with username, email, password (hashed)
-- **UserProfile**: 1:1 with User. Stores `preferred_name`, `words_per_session`, encrypted API keys (`encrypted_deepseek_api_key`, `encrypted_gemini_api_key`), and key versions (`deepseek_key_version`, `gemini_key_version`) for session invalidation on key changes.
+- **UserProfile**: 1:1 with User. Stores `preferred_name`, `words_per_session`, encrypted API keys (`encrypted_deepseek_api_key`, `encrypted_gemini_api_key`), key versions (`deepseek_key_version`, `gemini_key_version`) for session invalidation on key changes, and `report_card_feedback` (Text) for the latest AI-generated report card feedback.
 - **UserSession**: Practice sessions with start/end timestamps, `summary_text`, `words_per_session`
 - **SessionWord**: Links words to sessions with `word_order`, averaged scores (`grammar_score`, `usage_score`, `naturalness_score`), `is_correct`, `is_skipped`. Scores are computed as averages across all attempts when the user clicks "Next Word".
 - **SessionWordAttempt**: Individual sentence attempts per word per session. Stores per-attempt scores from the feedback agent (grammar_score, usage_score, naturalness_score, is_correct, feedback text). Multiple rows per word per session.
 - **TokenBlocklist**: Revoked JWT refresh tokens
 
 ## AI Agent Architecture
-Three agents orchestrated via the OpenAI Agents SDK:
+Four agents orchestrated via the OpenAI Agents SDK:
 
 | Agent | Model | Role | Communication |
 |---|---|---|---|
 | Orchestrator | Gemini Flash | Primary agent. Sassy teacher persona. Intent classification (sentence vs chat). | Calls Feedback Agent as tool; hands off to Summary Agent at session end |
 | Feedback Agent | DeepSeek | Evaluates sentences. Returns structured JSON scores. Stateless. | Agent-as-tool (called by Orchestrator) |
 | Summary Agent | Gemini Flash | Produces end-of-session summary and mem0 update recommendations. | Handoff from Orchestrator when session complete |
+| Report Card Agent | Gemini Flash | Generates holistic teacher feedback for the Report Card page using mem0 + recent summaries + rolling scores. | Called independently by report_card_service.py (fire-and-forget from session exit) |
 
 **Data flow:** App code hydrates read-only `UserSessionContext` before each `Runner.run()` call. Agents never access DB or mem0 directly. All writes happen in app code after agent output is returned.
 
@@ -137,6 +141,8 @@ Three agents orchestrated via the OpenAI Agents SDK:
 - `POST /api/settings/keys/<provider>/validate` - Validate and save API key (provider: deepseek|gemini)
 - `DELETE /api/settings/keys/<provider>` - Clear API key and increment version
 - `GET /api/progress/stats` - Get home page stats (words_practiced_today, mastery_percentage, words_ready_for_review, total_words)
+- `GET /api/progress/report-card` - Get report card data (topline metrics, daily chart, score breakdown, teacher feedback)
+- `POST /api/progress/generate-feedback` - Trigger AI report card feedback generation (fire-and-forget from frontend)
 
 ### Sessions (admin/raw access)
 - `GET /api/sessions` - List all sessions (admin only)

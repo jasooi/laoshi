@@ -33,7 +33,7 @@ class Config():
     PROPAGATE_EXCEPTIONS = True
 
     # Practice session settings
-    DEFAULT_WORDS_PER_SESSION = 10
+    DEFAULT_WORDS_PER_SESSION = 5
 
     # Encryption for BYOK API keys
     ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')

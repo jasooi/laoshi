@@ -55,7 +55,11 @@ The number of words per session is configurable (default 10, user-settable later
 
 ### 4.3 Progress Tracking
 - **Home Page Stats**: At-a-glance summary including words practiced today, mastery level percentage, and words ready for review
-- **Dashboard**: Detailed statistics on learning progress over time
+- **Report Card**: A detailed dashboard showing the learner's overall progress and performance:
+  - **Topline Metrics**: Time practiced (hours), sessions completed, and distinct words practiced
+  - **Daily Sentence Chart**: Stacked bar chart showing correct vs incorrect sentences formed per day over the last 7 days
+  - **Teacher Feedback**: AI-generated report card feedback quip from the Laoshi persona, based on mem0 memories and recent session performance. Generated when the learner exits a completed session and displayed alongside the teacher's avatar.
+  - **Score Breakdown**: Rolling average scores (last 5 sessions) for Grammar, Usage, and Naturalness (each out of 10), with info buttons explaining what each score measures and template-based descriptions of the learner's current level
 - **Confidence Scores**: Each word has a confidence score (0–100%) that updates based on practice performance, categorised as: Needs Revision, Learning, Reviewing, or Mastered
 
 ### 4.4 BYOK (Bring Your Own API Key)
@@ -93,7 +97,7 @@ Attach images and personal notes to words as memory aids that trigger recall thr
 
 ### Progress & Motivation
 15. As a learner, I want to see my learning statistics on the home page (words practiced today, mastery percentage, words ready for review) so that I stay motivated.
-16. As a learner, I want a detailed dashboard showing my progress over time so that I can track improvement and identify weak areas.
+16. As a learner, I want a Report Card page showing topline practice metrics, a daily sentence chart (correct vs incorrect), AI-generated teacher feedback, and a score breakdown (grammar, usage, naturalness) so that I can track improvement and identify weak areas.
 17. As a learner, I want each word to have a confidence score that reflects how well I know it, so that I can focus on words that need more practice.
 
 ### Settings
@@ -111,6 +115,7 @@ Laoshi uses a multi-agent system built on the OpenAI Agents SDK:
 - **Orchestrator Agent** (Gemini Flash): Primary agent with sassy teacher persona. Classifies user intent (sentence attempt vs chat/question), responds to chat directly, calls the Feedback Agent as a tool for sentence evaluation, and hands off to the Summary Agent at session end.
 - **Feedback Agent** (DeepSeek): Agent-as-tool. Evaluates sentences for grammar, usage, and naturalness. Returns structured JSON scores. Stateless -- receives only the current sentence and target word. DeepSeek is used for its strong Mandarin evaluation capabilities.
 - **Summary Agent** (Gemini Flash): Handoff agent activated at session end. Reads the full conversation history and produces a session summary with mem0 update recommendations.
+- **Report Card Agent** (Gemini Flash): Standalone agent triggered when the learner exits a completed session. Reads mem0 memories and recent session data to produce a short (2-3 sentence) report card feedback quip in Laoshi's voice. Stored on UserProfile for display on the Report Card page.
 
 ### 6.2 Design Principles
 - Agents reason; app code manages all data. No agent has direct database or memory-store tools.
@@ -147,8 +152,8 @@ The minimum viable product includes:
 
 | Phase | Features |
 |---|---|
-| Phase 2 | Custom collections, pre-defined vocabulary sets from Laoshi library, saved sentences, detailed progress dashboard |
-| Phase 3 | SuperMemo spaced repetition algorithm for intelligent flashcard scheduling, community-contributed vocabulary sets |
+| Phase 2 | Report Card dashboard, custom collections, pre-defined vocabulary sets from Laoshi library |
+| Phase 3 | Saved sentences, SuperMemo spaced repetition algorithm for intelligent flashcard scheduling, community-contributed vocabulary sets |
 | Phase 4 | Contextual hints (images and notes on words), voice chat for spoken sentence practice |
 
 ## 9. Success Metrics

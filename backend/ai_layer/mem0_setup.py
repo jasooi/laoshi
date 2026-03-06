@@ -15,6 +15,8 @@ Extract and remember:
 - Learning goals and deadlines
 - Progress updates and completions
 - Preferred learning method (example sentences, sentence construction exercises)
+- Common mistakes and recurring errors in grammar, vocabulary usage, or naturalness
+- Specific grammar patterns or vocabulary words the student struggles with
 
 Do not store:
 - Personal identifiers beyond the user_id
@@ -25,6 +27,7 @@ Do not store:
 # Add custom categories for the mem0 memory store
 mem0_client.project.update(custom_categories=[
 	{"name": "weak_points", "description": "areas of weaknesses of the user in language learning"},
+	{"name": "common_mistakes", "description": "Recurring grammar errors, vocabulary misuse, or unnatural patterns the student repeatedly makes"},
 	{"name": "skill_levels", "description": "Proficiency: beginner, intermediate, advanced"},
 	{"name": "learning_goals", "description": "Learning objectives and targets"},
 	{"name": "personal_information", "description": "Basic information about the user including name, hobbies and personality traits"},

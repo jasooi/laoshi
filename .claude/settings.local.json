@@ -25,7 +25,9 @@
       "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/test_practice_runner.py -v)",
       "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/ -v)",
       "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/test_practice_api.py -v)",
-      "Bash(\"laoshivenv/Scripts/python\" -c \"\nfrom agents.extensions.memory import RedisSession\nimport inspect\nprint\\(inspect.getsource\\(RedisSession\\)\\)\n\")"
+      "Bash(\"laoshivenv/Scripts/python\" -c \"\nfrom agents.extensions.memory import RedisSession\nimport inspect\nprint\\(inspect.getsource\\(RedisSession\\)\\)\n\")",
+      "Bash(wc:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

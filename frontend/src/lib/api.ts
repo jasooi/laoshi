@@ -4,6 +4,7 @@ import type {
   PracticeMessageResponse,
   PracticeSummaryResponse,
   ProgressStats,
+  ReportCardData,
   UserSettings,
 } from '../types/api'
 
@@ -139,6 +140,8 @@ export const practiceApi = {
 // Progress stats API helpers
 export const progressApi = {
   getStats: () => api.get<ProgressStats>('/api/progress/stats'),
+  getReportCard: () => api.get<ReportCardData>('/api/progress/report-card'),
+  generateFeedback: () => api.post('/api/progress/generate-feedback'),
 }
 
 // Settings API helpers

@@ -45,8 +45,8 @@ PRD.md (what to build & why)
 | Phase | Scope | Status |
 |---|---|---|
 | **Phase 1 (MVP)** | Auth, vocabulary CRUD + CSV import, AI practice sessions, home stats, settings, security hardening | **Done** (bug-fixing) |
-| Phase 2 | Custom collections, pre-defined vocab sets, saved sentences, detailed progress dashboard | Not Started |
-| Phase 3 | Spaced repetition (SuperMemo), community-contributed vocab sets | Not Started |
+| **Phase 2** | Report Card dashboard, custom collections, pre-defined vocab sets | **Done** (M6) |
+| Phase 3 | Saved sentences, spaced repetition (SuperMemo), community-contributed vocab sets | Not Started |
 | Phase 4 | Contextual hints (images/notes on words), voice chat | Not Started |
 
 ---
@@ -233,26 +233,89 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 
 ---
 
-## Phase 2 -- Enhanced Features (future, not yet broken into tasks)
+## Phase 2 -- Enhanced Features
 
 ### Milestone 5: Collections & Pre-defined Vocab Sets
+**Status:** Not Started
 **PRD stories:** #4 (Browse/import pre-defined sets), #5 (Custom collections), #8 (Select collection to start session)
 
-### Milestone 6: Saved Sentences & Detailed Progress
-**PRD stories:** #14 (Save correct sentences to word), #16 (Detailed progress dashboard)
+---
+
+### Milestone 6: Report Card Dashboard
+**Status:** Done
+**Completed:** 2026-03-06
+**Spec folder:** `.claudedocs/m6-report-card/`
+**PRD stories:** #16 (Detailed progress dashboard)
+
+**Scope:** Replace the placeholder Progress page with a full Report Card showing topline metrics, a daily sentences chart (Recharts stacked bar), and two tabs — Teacher Feedback (AI-generated holistic feedback via new report card agent + mem0) and Score Breakdown (rolling average grammar/usage/naturalness with template descriptions and info tooltips). Includes a new schema column, new AI agent, new backend service, new endpoints, and a complete frontend page rewrite.
+
+**Key decisions:**
+- Score aggregation: rolling window of last 5 completed sessions (falls back to all-time if fewer)
+- Words Practiced metric: COUNT DISTINCT word_id (vocabulary breadth, not total attempts)
+- Score descriptions: template-based static thresholds (instant, zero cost)
+- Teacher feedback: new Gemini-based AI agent, fed mem0 memories + recent session summaries + rolling scores
+- Feedback trigger: fire-and-forget POST when user clicks "Back to Home" from session summary (doesn't block UX)
+- Feedback storage: `UserProfile.report_card_feedback` nullable Text column (single latest assessment, overwritten each time)
+- Chart library: Recharts (popular, TypeScript-typed, good stacked bar support)
+- Chart time range: last 7 days
+
+| # | Task | Status |
+|---|---|---|
+| | **Schema** | |
+| 6.1 | Backend: Add `report_card_feedback` (Text, nullable) column to `UserProfile` model | [x] |
+| 6.2 | Backend: Run Alembic migration for new column | [x] |
+| | **AI Agent** | |
+| 6.3 | Backend: Add `ReportCardContext` dataclass to `ai_layer/context.py` (user_id, preferred_name, mem0_preferences, recent_summaries, avg_grammar, avg_usage, avg_naturalness) | [x] |
+| 6.4 | Backend: Add `build_report_card_prompt()` to `chat_agents.py` — teacher persona, inputs: mem0 + recent summaries + rolling scores, output: JSON `{"feedback": string}` | [x] |
+| 6.5 | Backend: Add `report_card_agent` (Gemini model) and `build_report_card_agent(gemini_api_key=None)` for BYOK | [x] |
+| | **Business Logic** | |
+| 6.6 | Backend: Create `report_card_service.py` — `get_topline_metrics(user_id)` returns `{time_practiced_hours, sessions_completed, words_practiced}` | [x] |
+| 6.7 | Backend: `get_daily_chart_data(user_id)` — last 7 days of correct/incorrect sentence counts from `SessionWordAttempt`, fill missing days with zeros | [x] |
+| 6.8 | Backend: `get_rolling_scores(user_id)` — AVG grammar/usage/naturalness from last 5 completed sessions | [x] |
+| 6.9 | Backend: `get_score_description(score_type, score)` — template lookup mapping score ranges to descriptive text | [x] |
+| 6.10 | Backend: `generate_report_card_feedback(user_id)` — fetch mem0 + recent summaries + rolling scores, run report_card_agent, store result in `UserProfile.report_card_feedback` | [x] |
+| | **API Endpoints** | |
+| 6.11 | Backend: Create `report_card_resources.py` — `GET /api/progress/report-card` returns topline, chart_data, score_breakdown, teacher_feedback in one response | [x] |
+| 6.12 | Backend: `POST /api/progress/generate-feedback` — triggers report card feedback generation | [x] |
+| 6.13 | Backend: Register both resources in `app.py` | [x] |
+| | **Frontend Setup** | |
+| 6.14 | Frontend: Install Recharts (`npm install recharts`) | [x] |
+| 6.15 | Frontend: Add TypeScript interfaces to `types/api.ts` (ReportCardData, ReportCardTopline, DailyChartData, ScoreDetail, ScoreBreakdown) | [x] |
+| 6.16 | Frontend: Add `getReportCard()` and `generateFeedback()` to `progressApi` in `lib/api.ts` | [x] |
+| | **Frontend Page** | |
+| 6.17 | Frontend: Rewrite `Progress.tsx` — header with bar chart icon + "Report Card" title | [x] |
+| 6.18 | Frontend: Topline metrics row — 3 cards: Time Practiced, Sessions Completed, Words Practiced | [x] |
+| 6.19 | Frontend: Stacked bar chart (Recharts) — green (correct) + red (incorrect) bars, X-axis DD/MM dates, last 7 days | [x] |
+| 6.20 | Frontend: Tab section with Teacher Feedback and Score Breakdown tabs | [x] |
+| 6.21 | Frontend: Teacher Feedback tab — laoshi-logo.png avatar on left, italicised feedback text in quotes on right | [x] |
+| 6.22 | Frontend: Score Breakdown tab — 3 score cards (Grammar/Usage/Naturalness) each with purple icon, score/10, description, info tooltip | [x] |
+| 6.23 | Frontend: Empty states — no sessions, no chart data, no feedback, no scores | [x] |
+| | **Frontend Integration** | |
+| 6.24 | Frontend: `SessionSummary.tsx` — add fire-and-forget `progressApi.generateFeedback()` call on "Back to Home" click | [x] |
+| 6.25 | Frontend: `Sidebar.tsx` — rename "Progress" label to "Report Card" (keep same `/progress` route and icon) | [x] |
+| | **Testing** | |
+| 6.26 | Backend: Unit tests for `report_card_service.py` — topline metrics, rolling scores, daily chart, score descriptions | [x] |
+| 6.27 | Backend: Integration tests for report card endpoints — auth, empty state, with data, rolling window, missing days | [x] |
+| 6.28 | End-to-end manual test: complete session → exit → navigate to Report Card → verify feedback populated | [x] |
 
 ---
 
 ## Phase 3 -- Smart Learning (future)
 
-### Milestone 7: Spaced Repetition & Community Sets
+### Milestone 7: Saved Sentences
+**Status:** Not Started
+**PRD stories:** #14 (Save correct sentences to word)
+
+### Milestone 8: Spaced Repetition & Community Sets
+**Status:** Not Started
 **PRD stories:** SuperMemo algorithm for flashcard scheduling, community-contributed vocabulary sets
 
 ---
 
 ## Phase 4 -- Rich Media & Voice (future)
 
-### Milestone 8: Contextual Hints & Voice Chat
+### Milestone 9: Contextual Hints & Voice Chat
+**Status:** Not Started
 **PRD stories:** #20 (Photos/notes on words), voice chat for spoken sentence practice
 
 ---
@@ -274,13 +337,13 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 | #11 | Detailed feedback | M3 | 1 |
 | #12 | Skip words | M3 | 1 |
 | #13 | Toggle pinyin/definition | M3 | 1 |
-| #14 | Save correct sentences | M6 | 2 |
+| #14 | Save correct sentences | M7 | 3 |
 | #15 | Home page stats | M4 | 1 |
-| #16 | Detailed progress dashboard | M6 | 2 |
+| #16 | Report Card dashboard | M6 | 2 |
 | #17 | Confidence scores per word | M3 | 1 |
 | #18 | Configure words per session | M4 | 1 |
 | #19 | BYOK API key | M4 | 1 |
-| #20 | Photos/notes on words | M8 | 4 |
+| #20 | Photos/notes on words | M9 | 4 |
 
 ---
 

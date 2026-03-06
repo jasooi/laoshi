@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { PracticeSummaryResponse } from '../types/api'
+import { progressApi } from '../lib/api'
 
 interface SessionSummaryProps {
   summary: PracticeSummaryResponse
@@ -78,6 +79,9 @@ export function SessionSummary({ summary, onNewSession }: SessionSummaryProps) {
         </button>
         <Link
           to="/home"
+          onClick={() => {
+            progressApi.generateFeedback().catch(() => {})
+          }}
           className="px-6 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors text-center"
         >
           Back to Home
