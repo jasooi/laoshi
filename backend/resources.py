@@ -76,8 +76,13 @@ class WordListResource(Resource):
         per_page = request.args.get('per_page', 20, type=int)
         search = request.args.get('search', '', type=str).strip()
         sort_by = request.args.get('sort_by', 'pinyin', type=str)
+        deck_id = request.args.get('deck_id', type=int)
 
         base_query = Word.get_query_for_user(vc_user)
+
+        # Filter by deck_id if provided
+        if deck_id:
+            base_query = base_query.filter_by(deck_id=deck_id)
 
         if search:
             pattern = f"%{search}%"
@@ -98,57 +103,6 @@ class WordListResource(Resource):
         data = [w.format_data(vc_user) for w in items]
 
         return {"data": data, "pagination": pagination}, 200
-
-    @jwt_required()
-    def post(self):
-        # Words are created in bulk by default
-        data = request.get_json()
-        if not data:
-            return {"error": "No data provided"}, 400
-
-        if not isinstance(data, list):
-            return {"error": "Expected a JSON array of words"}, 400
-
-        for i, item in enumerate(data):
-            for key in ("word", "pinyin", "meaning"):
-                if key not in item or not item[key]:
-                    return {"error": f"Row {i+1} is missing required field: {key}"}, 400
-            # Validate field lengths
-            err = validate_word_fields(item)
-            if err:
-                return {"error": f"Row {i+1}: {err}"}, 400
-
-        vc_user = User.get_by_id(int(get_jwt_identity()))
-
-        words_list = []
-        for item in data:
-            word_to_add = Word(word=item["word"], pinyin=item["pinyin"], meaning=item["meaning"], source_name=item.get("source_name"), user_id=vc_user.id)
-            words_list.append(word_to_add)
-
-        try:
-            Word.add_list(words_list)
-        except IntegrityError:
-            return {"error": "Invalid user_id - user does not exist"}, 400
-        except Exception:
-            logger.exception("Error creating words")
-            return {"error": "An internal error occurred"}, 500
-
-        # Format data after commit so ids are populated
-        added_words_list_json = [word.format_data(vc_user) for word in words_list]
-        return {"created_data": added_words_list_json}, HTTPStatus.CREATED
-
-
-    @jwt_required()
-    def delete(self):
-        # this deletes all words for the logged in user
-        vc_user = User.get_by_id(int(get_jwt_identity()))
-        try:
-            Word.delete_all(vc_user)
-        except Exception as e:
-            return {"error": str(e)}, 500
-
-        success_message = "All your words successfully deleted"
-        return {'message': success_message}, HTTPStatus.OK
         
 
 
@@ -182,7 +136,7 @@ class WordResource(Resource):
         if err:
             return {"error": err}, 400
 
-        allowable_fields = ["word", "pinyin", "meaning", "confidence_score", "source_name"]
+        allowable_fields = ["word", "pinyin", "meaning", "source_name"]
         fields_to_update = [k for k in data.keys() if k in allowable_fields]
 
         if len(fields_to_update) == 0:
@@ -201,9 +155,6 @@ class WordResource(Resource):
             return {'error': 'Forbidden'}, HTTPStatus.FORBIDDEN
 
         for field in fields_to_update:
-            if field == "confidence_score":
-                found_word.update_confidence_score(new_value=data[field])
-                continue
             setattr(found_word, field, data[field])
 
         try:
@@ -236,8 +187,46 @@ class WordResource(Resource):
 
         success_message = f"word {found_word.word} successfully deleted"
         return {'message': success_message}, HTTPStatus.OK
-        
-        
+
+
+class WordMarkAsMasteredResource(Resource):
+    @jwt_required()
+    def post(self, word_id: int):
+        """Toggle mark-as-mastered status for a word."""
+        vc_user = User.get_by_id(int(get_jwt_identity()))
+
+        try:
+            found_word = Word.get_by_id(word_id)
+        except Exception as e:
+            logger.exception("Error fetching word")
+            return {"error": "An internal error occurred"}, 500
+
+        if not found_word:
+            return {'error': 'word not found'}, HTTPStatus.NOT_FOUND
+
+        # Access control: owner only
+        if not found_word.is_owner(vc_user):
+            return {'error': 'Forbidden'}, HTTPStatus.FORBIDDEN
+
+        try:
+            if found_word.marked_as_known:
+                # Unmark as mastered
+                found_word.unmark_as_mastered()
+                message = "Word unmarked as mastered"
+            else:
+                # Mark as mastered
+                found_word.mark_as_mastered()
+                message = "Word marked as mastered"
+
+            found_word.update()
+        except Exception:
+            logger.exception("Error updating word mastery status")
+            return {"error": "An internal error occurred"}, 500
+
+        response_data = found_word.format_data(vc_user)
+        response_data['message'] = message
+        return response_data, HTTPStatus.OK
+
 
 class UserListResource(Resource):
     from extensions import limiter

@@ -4,7 +4,7 @@ This file provides guidance when working with code in this repository.
 
 ## Project Overview
 
-Laoshi Coach is a Mandarin Chinese language learning application that helps users practice sentence formation using vocabulary words. Users import vocabulary, practice creating sentences with target words, and receive AI-powered evaluation and feedback with confidence score tracking.
+Laoshi Coach is a Mandarin Chinese language learning application that helps users practice sentence formation using vocabulary words. Users organize vocabulary into decks, practice creating sentences with target words, and receive AI-powered evaluation and feedback. The app uses spaced repetition (SM-2 algorithm) to optimize review scheduling based on user self-ratings of word mastery.
 
 ## Repository Overview
 

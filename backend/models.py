@@ -2,11 +2,78 @@
 # 4 models to be defined: Word, Word_session, Session, User
 
 from extensions import db
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from utils import construct_date_range_filter
+import math
 
 
 # Define models
+class Deck(db.Model):
+    __tablename__ = 'deck'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.String(500), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    laoshi_message = db.Column(db.String(500), nullable=True)
+    created_ds = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = db.relationship('User', back_populates='decks')
+    words = db.relationship('Word', back_populates='deck')
+    sessions = db.relationship('UserSession', back_populates='deck')
+
+    def format_data(self, viewer=None):
+        if viewer is None or viewer.id != self.user_id:
+            return None
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'user_id': self.user_id,
+            'laoshi_message': self.laoshi_message,
+            'created_ds': self.created_ds.isoformat() if self.created_ds else None,
+            'updated_ds': self.updated_ds.isoformat() if self.updated_ds else None,
+        }
+
+    def add(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    def update(self):
+        try:
+            self.updated_ds = datetime.utcnow()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    def delete(self):
+        try:
+            db.session.delete(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+
+    @classmethod
+    def get_by_id(cls, id: int):
+        return cls.query.filter_by(id=id).first()
+
+    @classmethod
+    def get_by_user_id(cls, user_id: int):
+        return cls.query.filter_by(user_id=user_id).all()
+
+    @classmethod
+    def exists(cls, id: int) -> bool:
+        return cls.query.filter_by(id=id).first() is not None
+
+
 class Word(db.Model):
     __tablename__ = 'word'
 
@@ -15,27 +82,36 @@ class Word(db.Model):
     word = db.Column(db.String(150), nullable=False)
     pinyin = db.Column(db.String(150), nullable=False)
     meaning = db.Column(db.String(300), nullable=False)
-    confidence_score = db.Column(db.Float, nullable=False, default=0.5)
     source_name = db.Column(db.String(200), nullable=True, default=None)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+
+    # Deck relationship
+    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id"), nullable=True)
+    deck = db.relationship('Deck', back_populates='words')
+
+    # SRS (Spaced Repetition System) fields
+    repetitions = db.Column(db.Integer, default=0)
+    interval_days = db.Column(db.Integer, default=1)
+    ease_factor = db.Column(db.Float, default=2.5)
+    next_review_date = db.Column(db.Date, nullable=True)
+
+    # Mastery tracking
+    last_quality = db.Column(db.Integer, nullable=True)
+    marked_as_known = db.Column(db.Boolean, default=False)
+    is_mastered = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', back_populates='words')
     sessions = db.relationship('SessionWord', back_populates='word')
 
-    STATUS_THRESHOLDS = [
-        (0.9, "Mastered"),
-        (0.7, "Reviewing"),
-        (0.3, "Learning"),
-        (0.0, "Needs Revision"),
-    ]
-
     @property
-    def status(self):
-        score = self.confidence_score if self.confidence_score is not None else 0.5
-        for threshold, label in self.STATUS_THRESHOLDS:
-            if score > threshold:
-                return label
-        return "Needs Revision"
+    def srs_status(self):
+        """Return SRS-based status for UI display."""
+        if self.is_mastered:
+            return "Mastered"
+        elif self.next_review_date is None:
+            return "New"
+        else:
+            return "In Review"
     
     def __repr__(self):
         return f"{self.id} - {self.word} - {self.pinyin} - {self.meaning}"
@@ -49,10 +125,35 @@ class Word(db.Model):
             'word': self.word,
             'pinyin': self.pinyin,
             'meaning': self.meaning,
-            'confidence_score': self.confidence_score,
-            'status': self.status,
             'source_name': self.source_name,
+            'deck_id': self.deck_id,
+            # SRS fields
+            'repetitions': self.repetitions,
+            'interval_days': self.interval_days,
+            'ease_factor': self.ease_factor,
+            'next_review_date': self.next_review_date.isoformat() if self.next_review_date else None,
+            # Mastery fields
+            'last_quality': self.last_quality,
+            'marked_as_known': self.marked_as_known,
+            'is_mastered': self.is_mastered,
+            'srs_status': self.srs_status,
         }
+
+    def update_mastery_status(self):
+        """
+        Update is_mastered based on last_quality and marked_as_known (Option B - Lenient).
+
+        Logic:
+        - Quality 5: Always mark as mastered
+        - Quality 4: Preserve existing is_mastered state (don't demote easily)
+        - Quality <= 3: Remove mastered status
+        - marked_as_known: Always mark as mastered (user override)
+        """
+        if self.marked_as_known or self.last_quality == 5:
+            self.is_mastered = True
+        elif self.last_quality is not None and self.last_quality <= 3:
+            self.is_mastered = False
+        # Quality 4: preserve existing is_mastered state (no change)
 
     def is_owner(self, viewer) -> bool:
         """Check if viewer is the owner of this word"""
@@ -61,12 +162,64 @@ class Word(db.Model):
         return viewer.id == self.user_id
     
 
-    def update_confidence_score(self, new_value: float):
-        if Word.is_valid_confidence_score(new_value):
-            self.confidence_score = new_value
-            return self
+    def update_srs(self, quality: int):
+        """
+        Update word SRS state using modified SM-2 algorithm.
+
+        Args:
+            quality: 0-5 rating from user self-assessment
+        """
+        # Fast-track perfect first attempts
+        if self.repetitions == 0 and quality == 5:
+            self.interval_days = 14
+            self.repetitions = 2
+            self.ease_factor = 2.5
+        elif quality < 3:
+            # Harsh reset on failure (fair since user controls quality)
+            self.repetitions = 0
+            self.interval_days = 1
         else:
-            raise ValueError("Confidence score invalid!")
+            # Standard SM-2 progression with gentler early intervals
+            if self.repetitions == 0:
+                self.interval_days = 1
+            elif self.repetitions == 1:
+                self.interval_days = 3
+            elif self.repetitions == 2:
+                self.interval_days = 7
+            else:
+                new_interval = self.interval_days * self.ease_factor
+                # Use ceil for intervals < 7 to prevent stuck at 1 day
+                if new_interval < 7:
+                    self.interval_days = math.ceil(new_interval)
+                else:
+                    self.interval_days = round(new_interval)
+
+            self.repetitions += 1
+
+        # Update ease factor (SM-2 formula)
+        self.ease_factor += (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+        self.ease_factor = max(1.3, self.ease_factor)
+
+        # Set next review date
+        self.next_review_date = date.today() + timedelta(days=self.interval_days)
+
+    def mark_as_mastered(self):
+        """Fast-track word to mastered state with long interval."""
+        self.marked_as_known = True
+        self.last_quality = 5
+        self.is_mastered = True
+
+        # SRS fast-track
+        self.repetitions = 5
+        self.interval_days = 90
+        self.ease_factor = 2.5
+        self.next_review_date = date.today() + timedelta(days=90)
+
+    def unmark_as_mastered(self):
+        """Remove mastered status and recalculate based on last quality rating."""
+        self.marked_as_known = False
+        # Recalculate is_mastered based on last_quality
+        self.update_mastery_status()
         
     # Model owns all database update logic, not resource
     def add(self):
@@ -133,8 +286,42 @@ class Word(db.Model):
         return cls.query.filter_by(id=id).first() is not None
 
     @classmethod
-    def is_valid_confidence_score(cls, confidence_score: float) -> bool:
-        return 0 <= confidence_score <= 1
+    def get_new_words(cls, deck_id: int, user_id: int, limit: int = None):
+        """Get words that have never been reviewed (next_review_date IS NULL)."""
+        query = cls.query.filter_by(
+            deck_id=deck_id,
+            user_id=user_id,
+            next_review_date=None
+        )
+        if limit:
+            query = query.limit(limit)
+        return query.all()
+
+    @classmethod
+    def get_due_words(cls, deck_id: int, user_id: int, limit: int = None):
+        """Get words that are due for review (next_review_date <= today)."""
+        today = date.today()
+        query = cls.query.filter(
+            cls.deck_id == deck_id,
+            cls.user_id == user_id,
+            cls.next_review_date <= today
+        ).order_by(cls.next_review_date.asc())
+        if limit:
+            query = query.limit(limit)
+        return query.all()
+
+    @classmethod
+    def get_future_words(cls, deck_id: int, user_id: int, limit: int = None):
+        """Get words with future review dates, sorted by nearest date."""
+        today = date.today()
+        query = cls.query.filter(
+            cls.deck_id == deck_id,
+            cls.user_id == user_id,
+            cls.next_review_date > today
+        ).order_by(cls.next_review_date.asc())
+        if limit:
+            query = query.limit(limit)
+        return query.all()
     
 
 
@@ -149,6 +336,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
 
     words = db.relationship('Word', back_populates='user')
+    decks = db.relationship('Deck', back_populates='user')
     sessions = db.relationship('UserSession', back_populates='user')
     profile = db.relationship('UserProfile', uselist=False, back_populates='user', lazy='joined')
 
@@ -251,6 +439,8 @@ class UserProfile(db.Model):
     deepseek_key_version = db.Column(db.Integer, default=1)
     gemini_key_version = db.Column(db.Integer, default=1)
     report_card_feedback = db.Column(db.Text, nullable=True)
+    current_streak = db.Column(db.Integer, default=0)
+    last_practice_date = db.Column(db.Date, nullable=True)
     created_ds = db.Column(db.DateTime, default=datetime.utcnow)
     updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -301,10 +491,12 @@ class UserSession(db.Model):
     session_start_ds = db.Column(db.DateTime)
     session_end_ds = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id"), nullable=True)
     summary_text = db.Column(db.Text, nullable=True)
     words_per_session = db.Column(db.Integer, nullable=False, default=10)
 
     user = db.relationship('User', back_populates='sessions')
+    deck = db.relationship('Deck', back_populates='sessions')
     session_words = db.relationship('SessionWord', back_populates='user_session')
 
     def __repr__(self):
@@ -323,6 +515,7 @@ class UserSession(db.Model):
             'session_start_ds': self.session_start_ds.isoformat() if self.session_start_ds else None,
             'session_end_ds': self.session_end_ds.isoformat() if self.session_end_ds else None,
             'user_id': self.user_id,
+            'deck_id': self.deck_id,
             'summary_text': self.summary_text,
             'words_per_session': self.words_per_session,
         }

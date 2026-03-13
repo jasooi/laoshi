@@ -10,11 +10,12 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 # Import from other files
 from extensions import db, jwt, limiter
-from resources import WordListResource, WordResource, UserListResource, UserResource, SessionListResource, SessionResource, SessionWordListResource, SessionWordResource, HomeResource, TokenResource, TokenRefreshResource, TokenRevokeResource, MeResource
-from practice_resources import PracticeSessionResource, PracticeMessageResource, PracticeNextWordResource, PracticeSummaryResource
+from resources import WordListResource, WordResource, WordMarkAsMasteredResource, UserListResource, UserResource, SessionListResource, SessionResource, SessionWordListResource, SessionWordResource, HomeResource, TokenResource, TokenRefreshResource, TokenRevokeResource, MeResource
+from practice_resources import PracticeSessionResource, PracticeMessageResource, PracticeNextWordResource, PracticeSummaryResource, PracticeEndSessionResource
 from progress_resources import ProgressStatsResource
 from settings_resources import UserSettingsResource, UserSettingsKeyResource, UserSettingsKeyValidateResource
-from report_card_resources import ReportCardResource, GenerateFeedbackResource
+from report_card_resources import ReportCardResource, GenerateFeedbackResource, StreakResource
+from deck_resources import deck_bp
 from models import TokenBlocklist
 from config import Config
 
@@ -42,8 +43,13 @@ def register_extensions(app):
 def register_resources(app):
     app.config['PROPAGATE_EXCEPTIONS'] = True
     api = Api(app, prefix='/api', errors={})
+
+    # Register deck blueprint
+    app.register_blueprint(deck_bp, url_prefix='/api')
+
     api.add_resource(WordListResource, '/words')
     api.add_resource(WordResource, '/words/<int:id>')
+    api.add_resource(WordMarkAsMasteredResource, '/words/<int:word_id>/mark-as-mastered')
     api.add_resource(UserListResource, '/users')
     api.add_resource(UserResource, '/users/<int:id>')
     api.add_resource(SessionListResource, '/sessions')
@@ -60,6 +66,7 @@ def register_resources(app):
     api.add_resource(PracticeSessionResource, '/practice/sessions')
     api.add_resource(PracticeMessageResource, '/practice/sessions/<int:id>/messages')
     api.add_resource(PracticeNextWordResource, '/practice/sessions/<int:id>/next-word')
+    api.add_resource(PracticeEndSessionResource, '/practice/sessions/<int:id>/end')
     api.add_resource(PracticeSummaryResource, '/practice/sessions/<int:id>/summary')
 
     # Progress and settings endpoints
@@ -71,6 +78,7 @@ def register_resources(app):
     # Report card endpoints
     api.add_resource(ReportCardResource, '/progress/report-card')
     api.add_resource(GenerateFeedbackResource, '/progress/generate-feedback')
+    api.add_resource(StreakResource, '/progress/streak')
 
 def create_app(config_class=None):
     app = Flask(__name__)

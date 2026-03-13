@@ -5,9 +5,18 @@ export interface Word {
   word: string
   pinyin: string
   meaning: string
-  confidence_score: number
-  status: string
   source_name: string | null
+  deck_id: number | null
+  // SRS fields
+  repetitions: number
+  interval_days: number
+  ease_factor: number
+  next_review_date: string | null
+  // Mastery fields
+  last_quality: number | null
+  marked_as_known: boolean
+  is_mastered: boolean
+  srs_status: string
 }
 
 export interface User {
@@ -21,6 +30,7 @@ export interface UserSession {
   session_start_ds: string
   session_end_ds: string | null
   user_id: number
+  deck_id: number | null
 }
 
 export interface SessionWord {
@@ -72,6 +82,28 @@ export interface PracticeSessionResponse {
   words_skipped: number
   words_total: number
   session_complete: boolean
+}
+
+export interface PracticeSession {
+  id: number
+  session_start_ds: string
+  deck_id: number | null
+  words_per_session: number
+  words_practiced: number
+  words_total: number
+}
+
+export interface PracticeResponse {
+  target_word: string
+  target_pinyin: string
+  target_english: string
+  user_sentence: string
+  is_correct: boolean
+  corrected_sentence: string | null
+  explanation: string
+  words_practiced: number
+  words_total: number
+  is_session_complete: boolean
 }
 
 export interface PracticeMessageResponse {
@@ -147,4 +179,27 @@ export interface UserSettings {
   words_per_session: number | null
   deepseek_api_key: string | null
   gemini_api_key: string | null
+}
+
+// Deck types
+export interface Deck {
+  id: number
+  name: string
+  description: string | null
+  user_id: number
+  laoshi_message: string | null
+  created_ds: string
+  updated_ds: string
+}
+
+export interface DeckWithStats extends Deck {
+  word_count: number
+  mastered_count: number
+  mastery_percentage: number
+  last_practiced_at: string | null
+}
+
+export interface StreakData {
+  current_streak: number
+  last_practice_date: string | null
 }

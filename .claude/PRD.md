@@ -26,10 +26,43 @@ Most language learning apps target complete beginners with basic grammar drills 
 
 ## 4. Core Features
 
-### 4.1 AI-Coached Practice Sessions
-The centrepiece of Laoshi. The AI coach ("Laoshi") has a consistent sassy-but-encouraging teacher persona and guides the learner through practice sessions using a multi-agent architecture. The system presents vocabulary words one at a time on a flashcard. For each word, the learner can:
+### 4.1 Vocabulary Management & Decks
+Vocabulary is organised into **decks** — themed collections of words that learners practice together. Each word belongs to exactly one deck.
+
+- **Deck Creation**: Learners create decks with a name and description, then populate them via CSV import, manual word addition, or by combining words from existing decks (words are copied, not linked)
+- **CSV Import**: Upload vocabulary from CSV files directly into a deck (2-step: create deck, then upload words)
+- **Pre-defined Library** *(deferred to future milestone)*: Import curated vocabulary sets from the Laoshi database
+- **Deck Combining**: Select words from one or more existing decks to create a new deck. An info note informs users that copied words are independent of the originals.
+- **Word Details**: Each word entry includes Chinese characters, pinyin, and English definition
+- **CRUD Operations**: Add, edit, and delete individual words within a deck. Deleting a deck cascade-deletes its words.
+- **Library Page**: A dedicated page (replacing the previous Vocabulary page) for browsing, creating, and managing decks and their words
+
+### 4.2 Home Screen & Deck-Based Navigation
+The home screen uses a **chat-app-style split-panel layout** (inspired by WhatsApp/Telegram web) to create a friendly, inviting interface where studying feels like chatting with a friend.
+
+- **Left Panel — Deck List**: All of the learner's decks, sorted by reverse recency (least recently practiced first, to create urgency). Each deck shows:
+  - **Growth Icon**: 🌱 Seedling (0–24% mastered), 🌿 Leaves (25–74% mastered), or 🌸 Flower (75–100% mastered), representing vocabulary mastery growth
+  - **Recency Colour**: Green (practiced <48h ago), yellow (48–120h), red (>120h), muted grey (never practiced) — applied to both the icon and progress bar
+  - **Progress Bar**: Visual mastery progress (mastered words / total words)
+  - **Word Count**: e.g. "34/120"
+  - **Laoshi Message Preview**: AI-generated one-liner about the deck's progress (truncated)
+  - **"+ New Deck"** button at bottom → navigates to the Library page
+- **Right Panel — Deck Detail**: When a deck is selected, shows:
+  - Circular progress ring, deck name, total/mastered word counts
+  - Full Laoshi message in a quote box
+  - "Start Practice" and "Manage in Library →" action buttons
+- **Right Panel — Empty State**: When no deck is selected, shows the Laoshi avatar, "Select a deck to begin", and the day streak counter
+- **Day Streak**: Tracks consecutive days with at least one completed practice session. Displayed as a badge on the home screen.
+
+### 4.3 AI-Coached Practice Sessions (Inline)
+The centrepiece of Laoshi. Practice sessions appear **inline in the home screen's right panel** (like opening a chat in WhatsApp web), reinforcing the conversational feel. The AI coach ("Laoshi") has a consistent sassy-but-encouraging teacher persona and guides the learner through practice sessions using a multi-agent architecture.
+
+**Starting a session:** The learner selects a deck from the left panel, then clicks "Start Practice" on the deck detail view. Words are selected using a **Spaced Repetition System (SRS)** — 40% new words (never reviewed) and 60% words due for review (based on learning intervals), with the most overdue words prioritized first.
+
+**During a session**, the system presents vocabulary words one at a time. For each word, the learner can:
 - Submit one or more practice sentences for evaluation (multiple attempts allowed)
 - Chat freely with Laoshi (ask questions, discuss goals, ask about the word or prior feedback)
+- Click "Mark as Known" to fast-track words they already know (removes from session, schedules for 90-day review)
 - Click "Next Word" to advance to the next word
 
 The coach evaluates each submitted sentence for:
@@ -38,37 +71,45 @@ The coach evaluates each submitted sentence for:
 - Naturalness (1-10) -- does it sound like something a native speaker would say?
 - The coach provides persona-toned feedback, corrections, explanations, and example sentences.
 
+**Current word display:** A collapsible panel on the right side of the chat shows only the current word (character, pinyin, meaning). Practiced and skipped word lists are no longer displayed during the session.
+
 **Multi-attempt scoring:** When the learner clicks "Next Word", the system averages all attempt scores for that word. A word is considered correctly practiced when the averaged grammar score is 10 and averaged usage score is >= 8. If the word was never attempted (no sentences submitted), clicking "Next Word" counts it as skipped.
 
-**Session end:** The session ends when all words have been either attempted or skipped. At session end, the coach produces a summary with 2 specific positives and 1 area for improvement, drawn from actual session content. The system also updates persistent user memory (mem0) with learning patterns observed during the session.
+**Quality self-rating:** After clicking "Next Word", the learner rates their understanding of the word (0-5 scale from "I don't understand" to "Perfect command"). This rating updates the word's review schedule using the SM-2 spaced repetition algorithm — words rated highly appear less frequently, while words rated poorly appear sooner for reinforcement.
+
+**Early exit:** A close button (top right) ends the session immediately -- remaining unpracticed words are marked as skipped and the session summary is shown. If the learner clicks a different deck while a session is active, a confirmation modal asks whether to end the current session.
+
+**Session end:** The session ends when all words have been either attempted or skipped, or when the learner closes the session early. At session end, the coach produces:
+1. A summary with 2 specific positives and 1 area for improvement, drawn from actual session content
+2. A **deck one-liner** -- a short AI-generated message about the deck's progress and what to focus on next (displayed on the deck's card in the left panel)
+
+The system also updates persistent user memory (mem0) with learning patterns observed during the session, and updates the learner's day streak.
 
 **Persistent memory:** Laoshi remembers user preferences, learning patterns, and study style across sessions via mem0 (cross-session memory). This enables personalised coaching that adapts over time.
 
-The number of words per session is configurable (default 10, user-settable later via Settings). Words are selected randomly from the learner's vocabulary, excluding mastered words (confidence >= 0.9).
+The number of words per session is configurable (default 10, user-settable via Settings).
 
-### 4.2 Vocabulary Management
-- **CSV Import**: Learners can upload their own vocabulary from CSV files
-- **Pre-defined Sets**: Import curated vocabulary sets from the Laoshi database (a mix of officially curated sets and community-contributed sets)
-- **Collections**: Learners can organise words into custom collections grouped by real-world context (e.g. "Technical Interview Vocab", "Restaurant & Food", "Office Small Talk")
-- **Word Details**: Each word entry includes Chinese characters, pinyin, and English definition
-- **CRUD Operations**: Add, edit, and delete individual words
-
-### 4.3 Progress Tracking
+### 4.4 Progress Tracking
 - **Home Page Stats**: At-a-glance summary including words practiced today, mastery level percentage, and words ready for review
 - **Report Card**: A detailed dashboard showing the learner's overall progress and performance:
   - **Topline Metrics**: Time practiced (hours), sessions completed, and distinct words practiced
   - **Daily Sentence Chart**: Stacked bar chart showing correct vs incorrect sentences formed per day over the last 7 days
   - **Teacher Feedback**: AI-generated report card feedback quip from the Laoshi persona, based on mem0 memories and recent session performance. Generated when the learner exits a completed session and displayed alongside the teacher's avatar.
   - **Score Breakdown**: Rolling average scores (last 5 sessions) for Grammar, Usage, and Naturalness (each out of 10), with info buttons explaining what each score measures and template-based descriptions of the learner's current level
-- **Confidence Scores**: Each word has a confidence score (0–100%) that updates based on practice performance, categorised as: Needs Revision, Learning, Reviewing, or Mastered
+- **Spaced Repetition & Mastery**: Words are scheduled for review using the SM-2 spaced repetition algorithm. Each word has a dynamic **mastery status** based on the learner's quality self-ratings:
+  - A word becomes "mastered" when rated quality 5 (perfect command)
+  - Mastery is removed if rated quality 3 or below (struggling)
+  - Quality 4 (good grasp) preserves existing mastery state
+  - Words marked as "already known" via the "Mark as Known" button are immediately mastered and scheduled for long-interval review (90 days)
+  - The deck's growth icon (🌱🌿🌸) reflects the percentage of mastered words, providing visual motivation as learners progress
 
-### 4.4 BYOK (Bring Your Own API Key)
+### 4.5 BYOK (Bring Your Own API Key)
 Laoshi provides free-tier API keys by default for the AI coach. Users can input their own API key in Settings so that the app continues to work if the default keys reach their usage limits.
 
-### 4.5 Saved Sentences
+### 4.6 Saved Sentences
 Learners can save correct sentences they have constructed during practice to a word, creating a personal reference library of natural Mandarin sentences they have produced.
 
-### 4.6 Contextual Hints (Future Phase)
+### 4.7 Contextual Hints (Future Phase)
 Attach images and personal notes to words as memory aids that trigger recall through association rather than explicit definition. For example:
 - A photo of a billboard with 销售 that the learner sees on their commute
 - A note like "Tom's favourite vegetable" attached to 芥兰
@@ -98,7 +139,7 @@ Attach images and personal notes to words as memory aids that trigger recall thr
 ### Progress & Motivation
 15. As a learner, I want to see my learning statistics on the home page (words practiced today, mastery percentage, words ready for review) so that I stay motivated.
 16. As a learner, I want a Report Card page showing topline practice metrics, a daily sentence chart (correct vs incorrect), AI-generated teacher feedback, and a score breakdown (grammar, usage, naturalness) so that I can track improvement and identify weak areas.
-17. As a learner, I want each word to have a confidence score that reflects how well I know it, so that I can focus on words that need more practice.
+17. As a learner, I want to rate how well I understand each word after practicing it (quality 0-5 self-rating), so that the system can schedule reviews at optimal intervals using spaced repetition and I can focus on words that need reinforcement.
 
 ### Settings
 18. As a learner, I want to configure how many words are practiced per session so that I can adjust sessions to my available time and energy.
@@ -153,7 +194,7 @@ The minimum viable product includes:
 | Phase | Features |
 |---|---|
 | Phase 2 | Report Card dashboard, custom collections, pre-defined vocabulary sets from Laoshi library |
-| Phase 3 | Saved sentences, SuperMemo spaced repetition algorithm for intelligent flashcard scheduling, community-contributed vocabulary sets |
+| Phase 3 | Saved sentences, advanced SRS features (leeches detection, custom ease factors), community-contributed vocabulary sets |
 | Phase 4 | Contextual hints (images and notes on words), voice chat for spoken sentence practice |
 
 ## 9. Success Metrics
@@ -164,8 +205,8 @@ Since Laoshi is a free community tool, success is measured by engagement, retent
 |---|---|
 | Weekly Active Users | Number of users who complete at least one practice session per week |
 | Session Completion Rate | % of started practice sessions that are completed (not abandoned) |
-| Words Mastered | Average number of words reaching "Mastered" confidence level per user |
+| Words Mastered | Average number of words achieving mastered status (quality 5 rating) per user |
 | Return Rate | % of users who return for a second session within 7 days of their first |
 | Vocabulary Growth | Average number of words added per user over time |
-| Mastery Progression | Average time for a word to move from "Needs Revision" to "Mastered" |
+| Mastery Progression | Average time (in days) and number of practice repetitions for a word to achieve mastered status |
 | User Satisfaction | Qualitative feedback from the community on naturalness of AI feedback |

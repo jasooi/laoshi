@@ -97,10 +97,13 @@ Rules:
 
 Also recommend any updates to long-term memory about this student's learning patterns, including common mistakes and recurring errors you observed in this session.
 
+Additionally, generate a short one-liner message (max 80 chars) about this deck's progress and what to focus on next. Examples: "Your 把 sentences are getting natural! Try 被 constructions next." or "Great work on restaurant vocab! Ready for ordering?"
+
 Return response in JSON format:
 {{
   "summary_text": string,
-  "mem0_updates": string[]
+  "mem0_updates": string[],
+  "deck_oneliner": string
 }}"""
 
 

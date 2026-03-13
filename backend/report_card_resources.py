@@ -44,3 +44,19 @@ class GenerateFeedbackResource(Resource):
         user_id = int(get_jwt_identity())
         feedback = generate_report_card_feedback(user_id)
         return {'feedback': feedback}, 200
+
+
+class StreakResource(Resource):
+    @jwt_required()
+    def get(self):
+        """Get user's current streak and last practice date."""
+        user_id = int(get_jwt_identity())
+        profile = UserProfile.get_by_user_id(user_id)
+
+        if not profile:
+            return {'error': 'User profile not found'}, 404
+
+        return {
+            'current_streak': profile.current_streak or 0,
+            'last_practice_date': profile.last_practice_date.isoformat() if profile.last_practice_date else None,
+        }, 200

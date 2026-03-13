@@ -3,9 +3,15 @@ import type {
   PracticeSessionResponse,
   PracticeMessageResponse,
   PracticeSummaryResponse,
+  PracticeSession,
+  PracticeResponse,
   ProgressStats,
   ReportCardData,
   UserSettings,
+  DeckWithStats,
+  Word,
+  PaginatedResponse,
+  StreakData,
 } from '../types/api'
 
 const api = axios.create({
@@ -114,11 +120,14 @@ api.interceptors.response.use(
 
 // Practice session API helpers
 export const practiceApi = {
-  startSession: (wordsCount?: number) =>
+  startSession: (deckId: number, wordsCount?: number) =>
     api.post<PracticeSessionResponse>(
       '/api/practice/sessions',
-      wordsCount ? { words_count: wordsCount } : {}
+      { deck_id: deckId, ...(wordsCount ? { words_count: wordsCount } : {}) }
     ),
+
+  getSession: (sessionId: number) =>
+    api.get<{ session: PracticeSession }>(`/api/practice/sessions/${sessionId}`),
 
   sendMessage: (sessionId: number, message: string) =>
     api.post<PracticeMessageResponse>(
@@ -126,9 +135,21 @@ export const practiceApi = {
       { message }
     ),
 
-  nextWord: (sessionId: number) =>
+  submitSentence: (sessionId: number, sentence: string) =>
+    api.post<PracticeResponse>(
+      `/api/practice/sessions/${sessionId}/messages`,
+      { message: sentence }
+    ),
+
+  nextWord: (sessionId: number, quality?: number) =>
+    api.post<PracticeResponse>(
+      `/api/practice/sessions/${sessionId}/next-word`,
+      quality !== undefined ? { quality } : {}
+    ),
+
+  endSession: (sessionId: number) =>
     api.post<PracticeMessageResponse>(
-      `/api/practice/sessions/${sessionId}/next-word`
+      `/api/practice/sessions/${sessionId}/end`
     ),
 
   getSummary: (sessionId: number) =>
@@ -142,6 +163,43 @@ export const progressApi = {
   getStats: () => api.get<ProgressStats>('/api/progress/stats'),
   getReportCard: () => api.get<ReportCardData>('/api/progress/report-card'),
   generateFeedback: () => api.post('/api/progress/generate-feedback'),
+  getStreak: () => api.get<StreakData>('/api/progress/streak'),
+}
+
+// Deck API helpers
+export const deckApi = {
+  getDecks: () => api.get<{ decks: DeckWithStats[] }>('/api/decks'),
+  createDeck: (data: { name: string; description?: string }) =>
+    api.post<DeckWithStats>('/api/decks', data),
+  getDeck: (id: number) => api.get<DeckWithStats>(`/api/decks/${id}`),
+  updateDeck: (id: number, data: { name?: string; description?: string }) =>
+    api.put<DeckWithStats>(`/api/decks/${id}`, data),
+  deleteDeck: (id: number) => api.delete(`/api/decks/${id}`),
+  getDeckWords: (id: number, params?: { page?: number; per_page?: number; search?: string; sort_by?: string; sort_order?: string }) =>
+    api.get<PaginatedResponse<Word>>(`/api/decks/${id}/words`, { params }),
+  addWordsToDeck: (id: number, words: { word: string; pinyin: string; meaning: string; source_name?: string }[]) =>
+    api.post<{ created: Word[] }>(`/api/decks/${id}/words`, { words }),
+  combineDecks: (data: { name: string; description?: string; source_deck_ids: number[] }) =>
+    api.post<DeckWithStats & { words_copied: number }>('/api/decks/combine', data),
+}
+
+// Word API helpers
+export const wordsApi = {
+  getWords: (deckId: number, page?: number, perPage?: number) =>
+    api.get<PaginatedResponse<Word>>(`/api/decks/${deckId}/words`, {
+      params: { page, per_page: perPage },
+    }),
+  uploadWords: (deckId: number, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post<{ created: Word[] }>(`/api/decks/${deckId}/words/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  },
+  markAsMastered: (wordId: number, marked?: boolean) =>
+    api.post<Word & { message: string }>(`/api/words/${wordId}/mark-as-mastered`, { marked }),
 }
 
 // Settings API helpers

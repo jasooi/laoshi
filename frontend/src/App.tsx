@@ -4,10 +4,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Welcome from './pages/Welcome'
 import Login from './pages/Login'
 import Register from './pages/Register'
-import Home from './pages/Home'
-import Practice from './pages/Practice'
+import Home from './pages/home/index'
+import Library from './pages/library'
 import Progress from './pages/Progress'
-import Vocabulary from './pages/Vocabulary'
 import Settings from './pages/Settings'
 
 function App() {
@@ -20,10 +19,9 @@ function App() {
 
         {/* Protected routes */}
         <Route path="/" element={<ProtectedRoute><Welcome /></ProtectedRoute>} />
-        <Route path="/practice" element={<ProtectedRoute><Practice /></ProtectedRoute>} />
-        <Route path="/home" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+        <Route path="/home/*" element={<ProtectedRoute><Layout><Home /></Layout></ProtectedRoute>} />
+        <Route path="/library/*" element={<ProtectedRoute><Layout><Library /></Layout></ProtectedRoute>} />
         <Route path="/progress" element={<ProtectedRoute><Layout><Progress /></Layout></ProtectedRoute>} />
-        <Route path="/vocabulary" element={<ProtectedRoute><Layout><Vocabulary /></Layout></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
       </Routes>
     </Router>
