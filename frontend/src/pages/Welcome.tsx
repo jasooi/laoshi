@@ -4,7 +4,7 @@ const Welcome = () => {
   const navigate = useNavigate()
 
   const handleGetStarted = () => {
-    navigate('/vocabulary')
+    navigate('/library')
   }
 
   const handleSkipClick = () => {
@@ -12,7 +12,7 @@ const Welcome = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sage-tint via-pink-50 to-blue-100 p-4">
       <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full text-center">
         {/* Rocket Icon */}
         <div className="mb-8 relative inline-block">
@@ -41,9 +41,9 @@ const Welcome = () => {
           </div>
 
           {/* Sparkles */}
-          <div className="absolute top-2 right-0 text-purple-500 text-2xl animate-pulse">✨</div>
-          <div className="absolute top-8 right-12 text-purple-500 text-xl animate-pulse delay-75">✨</div>
-          <div className="absolute bottom-4 left-2 text-purple-400 text-lg animate-pulse delay-150">✨</div>
+          <div className="absolute top-2 right-0 text-sage text-2xl animate-pulse">✨</div>
+          <div className="absolute top-8 right-12 text-sage text-xl animate-pulse delay-75">✨</div>
+          <div className="absolute bottom-4 left-2 text-sage text-lg animate-pulse delay-150">✨</div>
         </div>
 
         {/* Heading */}
@@ -59,7 +59,7 @@ const Welcome = () => {
         {/* Get Started Button */}
         <button
           onClick={handleGetStarted}
-          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-full mb-4 transition-colors shadow-md"
+          className="w-full bg-sage hover:bg-sage/80 text-white font-semibold py-4 px-8 rounded-full mb-4 transition-colors shadow-md"
         >
           Get started
         </button>

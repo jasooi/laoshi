@@ -47,19 +47,21 @@ Milestone 5 transforms Laoshi's UX from a traditional learning app into a chat-a
 
 **Acceptance Criteria:**
 - Home screen shows a list of all user's decks, sorted by reverse recency (least recently practiced first)
-- Each deck card displays:
-  - Growth icon (🌱 seedling, 🌿 leaves, or 🌸 flower based on mastery %)
-  - Recency color (green <48h, yellow 48-120h, red >120h, grey never practiced)
-  - Progress bar (same color as icon)
-  - Word count (mastered/total)
-  - AI-generated one-liner message preview
-  - Last practiced timestamp
-- Clicking a deck shows deck detail panel with:
-  - Circular progress ring
-  - Total/mastered word counts
-  - Full AI one-liner message
-  - "Start Practice" button
-  - "Manage in Library →" button
+- Each deck is displayed as a **chat-app style list item** (not card) with:
+  - Recency-colored circle avatar (w-11 h-11) containing Lucide growth icon (Sprout/Leaf/Flower2, white on colored bg)
+  - Deck name (bold, truncated) + last practiced time ago (right-aligned)
+  - AI-generated one-liner message preview (1 line, truncated)
+  - Progress bar indented under avatar (h-1.5, recency-colored fill, warm-gray track) + tiny word count (mastered/total)
+  - Active state: sage-tint background + recency-colored left indicator bar (w-[3px])
+  - Recency colors: sage (#6B8F71) <48h, amber (#C4973B) 48-120h, coral (#D4715E) >120h, neutral (#A8A5A0) never
+- Clicking a deck shows **DeckLobby** detail panel with:
+  - Wide horizontal 2-column layout (max-w-3xl, rounded-3xl, p-12)
+  - Progress ring (left, 160px SVG, sage fill)
+  - Deck name in serif font (text-4xl Lora), "Last practiced" pill badge
+  - 3-column stats grid (Total Words, Practiced, Mastered in sage)
+  - Full AI one-liner in a quote box (sage-tint background, rounded-2xl)
+  - Horizontal button row: "Start Practice" (bg-sage rounded-xl) + "Manage in Library →" text link
+  - framer-motion entrance animation (opacity + scale)
 - Clicking "Start Practice" starts a session with words from that deck using SRS algorithm (40% new words, 60% due/overdue review words)
 - Practice session appears inline in the right panel (chat interface)
 - Session words are filtered by the selected deck
@@ -201,7 +203,7 @@ Milestone 5 transforms Laoshi's UX from a traditional learning app into a chat-a
 
 ### FR-10: Library Page (Replaces Vocabulary Page)
 1. Route changes from `/vocabulary` to `/library`
-2. Sidebar link renamed from "Vocabulary" to "Library"
+2. Sidebar link renamed from "Vocabulary" to "Library", moved **above** Report Card (order: Home, Library, Report Card, Settings)
 3. **Main Library view** shows:
    - Grid of deck cards (3-4 columns on desktop, responsive)
    - No top-level summary stats
@@ -217,15 +219,19 @@ Milestone 5 transforms Laoshi's UX from a traditional learning app into a chat-a
    - Stats row: `{word_count} words  •  {growth_icon} {mastery_percentage}% mastered`
    - Progress bar (colored by recency, NOT mastery)
    - Recency badge (🟢/🟡/🔴/⚫ + time ago, bottom-left)
-   - Kebab menu (⋮, top-right): Edit Deck, Delete Deck
+   - Kebab menu (⋮, top-right, visible on hover): Edit Deck, Delete Deck
+   - Card has `border-l-[3px]` colored by recency, fixed `h-[240px]`, white bg, shadow-sm
    - **NO laoshi_message** (only shown on Home screen)
-5. **Recency colors** (applied to growth icon + progress bar):
-   - Green: <48h since last practice
-   - Yellow: 48-120h
-   - Red: >120h
-   - Grey: never practiced
-6. Clicking a deck navigates to `/library/deck/:deckId` (words table view)
-7. **Deck detail view** (`/library/deck/:id`):
+5. **Kebab menu** on each deck card:
+   - "Edit Deck" enters **inline edit mode**: card transforms in-place with input/textarea, `ring-2 ring-sage` highlight, Save/Cancel buttons, Enter/Esc keyboard shortcuts
+   - "Delete Deck" shows browser `confirm()` with word count warning: "Delete '{name}'? This will permanently delete {count} words. This cannot be undone."
+6. **Recency colors** (applied to card left border + progress bar fill/track + badge pill):
+   - Sage (#6B8F71): <48h since last practice
+   - Amber (#C4973B): 48-120h
+   - Coral (#D4715E): >120h
+   - Neutral (#A8A5A0): never practiced
+7. Clicking a deck navigates to `/library/deck/:deckId` (words table view)
+8. **Deck detail view** (`/library/deck/:id`):
    - "← Back to Library" breadcrumb
    - Simplified stats: `{mastered} / {total} mastered ({percentage}%)` + growth icon + stage name
    - Actions: "+ Add Word", "Export"
@@ -243,12 +249,19 @@ Milestone 5 transforms Laoshi's UX from a traditional learning app into a chat-a
    - Set all existing words' `deck_id` to this default deck
 2. Existing sessions remain accessible in Report Card (null `deck_id` for legacy sessions)
 
-### FR-12: Color Scheme
-1. Replace purple (#9333EA) with warm, muted tones:
-   - Primary: warm sage/olive green (buttons, active states)
-   - Accent: muted amber/terracotta (highlights)
-   - Backgrounds: warm grays (stone-50, stone-100)
-2. Apply consistently across all components
+### FR-12: Color Scheme — "Quiet Study" Theme
+1. Replace old purple (#9333EA) theme entirely with the "Quiet Study" warm palette
+2. New Tailwind config tokens:
+   - `warm-*`: offwhite (#FAFAF8), black (#2A2A28), gray (#E8E5E0), muted (#8A8A86)
+   - `sage` (#6B8F71) + `sage-tint` (#EDF2EE) — primary action color
+   - `amber` (#C4973B) + `amber-tint` (#FBF5E8) — medium recency accent
+   - `coral` (#D4715E) + `coral-tint` (#FDF0ED) — stale recency / danger accent
+   - `neutral` (#A8A5A0) + `neutral-tint` (#F2F1EF) — never-practiced / disabled
+3. Font families: Inter (sans), Lora (serif)
+4. Remove old `primary-*` (purple 50-900) and custom `stone-*` tokens entirely
+5. Recency colors updated to use theme tokens: sage (<48h), amber (48-120h), coral (>120h), neutral (never)
+6. Apply consistently across **all** 20 frontend components (see design.md Section 6.3 for full file list)
+7. Sidebar active state changes from `bg-purple-100 text-purple-600` to `bg-sage-tint text-sage`
 
 ### FR-13: Spaced Repetition System (SM-2)
 1. Each word stores SRS state:

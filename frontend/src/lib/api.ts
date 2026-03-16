@@ -5,6 +5,7 @@ import type {
   PracticeSummaryResponse,
   PracticeSession,
   PracticeResponse,
+  WordContext,
   ProgressStats,
   ReportCardData,
   UserSettings,
@@ -127,7 +128,7 @@ export const practiceApi = {
     ),
 
   getSession: (sessionId: number) =>
-    api.get<{ session: PracticeSession }>(`/api/practice/sessions/${sessionId}`),
+    api.get<{ session: PracticeSession; current_word: WordContext | null; deck_name: string | null }>(`/api/practice/sessions/${sessionId}`),
 
   sendMessage: (sessionId: number, message: string) =>
     api.post<PracticeMessageResponse>(
@@ -142,7 +143,7 @@ export const practiceApi = {
     ),
 
   nextWord: (sessionId: number, quality?: number) =>
-    api.post<PracticeResponse>(
+    api.post<PracticeMessageResponse>(
       `/api/practice/sessions/${sessionId}/next-word`,
       quality !== undefined ? { quality } : {}
     ),
@@ -156,6 +157,9 @@ export const practiceApi = {
     api.get<PracticeSummaryResponse>(
       `/api/practice/sessions/${sessionId}/summary`
     ),
+
+  rerateWord: (wordId: number, sessionId: number, quality: number) =>
+    api.post(`/api/words/${wordId}/rerate`, { quality, session_id: sessionId }),
 }
 
 // Progress stats API helpers
@@ -177,7 +181,7 @@ export const deckApi = {
   deleteDeck: (id: number) => api.delete(`/api/decks/${id}`),
   getDeckWords: (id: number, params?: { page?: number; per_page?: number; search?: string; sort_by?: string; sort_order?: string }) =>
     api.get<PaginatedResponse<Word>>(`/api/decks/${id}/words`, { params }),
-  addWordsToDeck: (id: number, words: { word: string; pinyin: string; meaning: string; source_name?: string }[]) =>
+  addWordsToDeck: (id: number, words: { word: string; pinyin: string; meaning: string; notes?: string }[]) =>
     api.post<{ created: Word[] }>(`/api/decks/${id}/words`, { words }),
   combineDecks: (data: { name: string; description?: string; source_deck_ids: number[] }) =>
     api.post<DeckWithStats & { words_copied: number }>('/api/decks/combine', data),
@@ -200,6 +204,10 @@ export const wordsApi = {
   },
   markAsMastered: (wordId: number, marked?: boolean) =>
     api.post<Word & { message: string }>(`/api/words/${wordId}/mark-as-mastered`, { marked }),
+  updateWord: (wordId: number, data: { word?: string; pinyin?: string; meaning?: string; notes?: string }) =>
+    api.put<Word>(`/api/words/${wordId}`, data),
+  deleteWord: (wordId: number) =>
+    api.delete(`/api/words/${wordId}`),
 }
 
 // Settings API helpers

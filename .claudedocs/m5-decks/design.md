@@ -480,43 +480,24 @@ The Library page is the deck management hub where users create, edit, delete, an
 - **Kebab menu (⋮)**: Top-right corner
 
 **Recency Color Logic (Option B - Icon + Bar Together):**
+
+Uses the new theme tokens (sage/amber/coral/neutral). See Section 6.4 for the full `getRecencyStyle()` implementation.
+
 ```tsx
-function getRecencyColor(lastPracticedAt: string | null): {
-  text: string;    // for growth icon
-  bg: string;      // for progress bar fill
-  badge: string;   // for recency badge dot
-} {
-  if (!lastPracticedAt) {
-    return { text: 'text-stone-400', bg: 'bg-stone-300', badge: '⚫' };
-  }
+const style = getRecencyStyle(deck.last_practiced_at);
 
-  const hoursSince = (Date.now() - new Date(lastPracticedAt).getTime()) / (1000 * 60 * 60);
+// Card left border colored by recency
+<div className={`border-l-[3px] ${style.border} ...`}>
 
-  if (hoursSince < 48) {
-    return { text: 'text-green-500', bg: 'bg-green-500', badge: '🟢' };
-  }
-  if (hoursSince < 120) {
-    return { text: 'text-yellow-500', bg: 'bg-yellow-500', badge: '🟡' };
-  }
-  return { text: 'text-red-500', bg: 'bg-red-500', badge: '🔴' };
-}
-```
+// Progress bar (recency-colored fill + tint track)
+<div className={`h-1.5 rounded-full ${style.progressTrack}`}>
+  <div className={`h-full rounded-full ${style.progressFill}`}
+       style={{ width: `${deck.mastery_percentage}%` }} />
+</div>
 
-**Usage:**
-```tsx
-const colors = getRecencyColor(deck.last_practiced_at);
-
-// Growth icon colored by recency
-<span className={`text-2xl ${colors.text}`}>
-  {getGrowthIcon(deck.mastery_percentage)}
-</span>
-
-// Progress bar colored by recency
-<div className={`h-2 ${colors.bg} rounded-full`} style={{ width: `${deck.mastery_percentage}%` }} />
-
-// Recency badge
-<span className="text-xs text-stone-500">
-  {colors.badge} {formatTimeAgo(deck.last_practiced_at)}
+// Recency badge pill
+<span className={`text-xs px-2 py-0.5 rounded-full ${style.badgeBg} ${style.badgeText}`}>
+  {formatRecency(deck.last_practiced_at)}
 </span>
 ```
 
@@ -716,17 +697,112 @@ interface HomeContextValue {
 }
 ```
 
-**DeckListItem:**
-```tsx
-interface DeckListItemProps {
-  deck: DeckWithStats
-  isActive: boolean
-  onClick: () => void
-}
+**DeckListItem (`pages/home/DeckListPanel.tsx`):**
 
-// Growth icon: seedling (<25%), leaves (25-50%), bud (50-75%), flower (75-100%)
-// Recency color: green (<48h), yellow (48-120h), red (>120h), grey (never)
+Chat-app style list item (not card layout). Each deck is a horizontal row with border-b separator.
+
 ```
+┌──────────────────────────────────────────────────────┐
+│ ┌───┐                                                │
+│ │ 🌿│  HSK 4 Core              2 hours ago           │  ← Avatar (recency-colored circle + Lucide growth icon)
+│ └───┘  Your 把 sentences are getting...              │  ← Laoshi message preview (line-clamp-1)
+│         ━━━━━━━━━━━━━━━━━━━━━━━━━  34/120            │  ← Progress bar (indented under avatar) + word count
+└──────────────────────────────────────────────────────┘
+```
+
+**Layout:**
+- `w-full text-left px-5 py-4 border-b border-warm-gray/50`
+- No border/rounded card — flat list items
+
+**Avatar (left):**
+- `w-11 h-11 rounded-full` with recency-colored background + white Lucide icon
+- Growth icons (3 tiers, Lucide components):
+  - `<Sprout size={20}>` for <25% mastered
+  - `<Leaf size={20}>` for 25-74% mastered
+  - `<Flower size={20}>` for 75-100% mastered
+- Avatar background color = recency color (sage/amber/coral hex via inline style)
+
+**Content (right of avatar):**
+- Row 1: **Deck name** (`font-medium text-warm-black truncate`) + **time ago** (right-aligned, `text-xs text-warm-black/40`)
+- Row 2: **Laoshi message preview** (`text-sm text-warm-black/50 line-clamp-1`)
+
+**Progress bar (below content, indented):**
+- Indented with `pl-[60px]` to align under content (past avatar)
+- `h-1.5 bg-warm-gray/60 rounded-full` track
+- Fill color = recency color (via inline `style={{ backgroundColor: recency.bar }}`)
+- Word count right of bar: `text-[10px] text-warm-black/35 font-medium tabular-nums` showing `{mastered}/{total}`
+
+**Active state:**
+- `bg-sage-tint` background
+- Left indicator: `absolute left-0 top-0 bottom-0 w-[3px]` with recency background color
+
+**Recency color function (returns hex values for inline styles):**
+```tsx
+function getRecencyColor(lastPracticedAt: string | null) {
+  if (!lastPracticedAt) return { bg: '#A8A5A0', bar: '#A8A5A0', tint: 'rgba(168,165,160,0.12)' }
+  const hours = (Date.now() - new Date(lastPracticedAt).getTime()) / 3_600_000
+  if (hours <= 48)  return { bg: '#6B8F71', bar: '#6B8F71', tint: 'rgba(107,143,113,0.12)' }  // sage
+  if (hours <= 120) return { bg: '#C4973B', bar: '#C4973B', tint: 'rgba(196,151,59,0.12)' }   // amber
+  return { bg: '#D4715E', bar: '#D4715E', tint: 'rgba(212,113,94,0.12)' }                     // coral
+}
+```
+
+**DeckDetailPanel / DeckLobby (`pages/home/DeckDetailPanel.tsx`):**
+
+Wide horizontal 2-column layout with framer-motion entrance animation.
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│     ┌─────────┐                   ┏━ Last practiced 2h ago ━┓   │
+│     │         │                                              │   │
+│     │  28%    │      HSK 4 Core          (font-serif 4xl)   │   │
+│     │  ring   │                                              │   │
+│     │         │     120          58          34              │   │
+│     └─────────┘   Total Words  Practiced  Mastered (sage)   │   │
+│                                                              │   │
+│                   "Your 把 sentences are getting really      │   │
+│                    natural! Ready for some 被 constructions?" │   │
+│                                                              │   │
+│                   [▶ Start Practice]   Manage in Library →   │   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Layout:**
+- `flex-1 h-full flex flex-col items-center justify-center bg-warm-offwhite p-8`
+- Inner card: `max-w-3xl w-full bg-white rounded-3xl p-12 border border-warm-gray shadow-sm`
+- Decorative: `absolute -top-24 -right-24 w-64 h-64 bg-sage-tint rounded-full opacity-50 blur-3xl` (subtle background orb)
+- Flex row: progress ring (left) + content (right), `gap-12`
+
+**Progress ring (left):**
+- Reusable `<ProgressRing>` component (SVG circular progress)
+- `size={160} strokeWidth={10}`
+- Track: `stroke-warm-gray`
+- Fill: `stroke-sage`
+- Center text: percentage + "mastered"
+
+**Content (right):**
+- "Last practiced" pill badge: `px-3 py-1 bg-warm-gray/30 text-warm-black/60 rounded-full text-xs`
+- Deck name: `font-serif text-4xl text-warm-black` (uses Lora font)
+- Stats: 3-column grid with large numbers (`text-2xl font-medium`), mastered count in `text-sage`
+- Laoshi message: quote box with `bg-sage-tint/50 p-5 rounded-2xl border border-warm-gray/50`, italic text
+- Buttons row:
+  - Start Practice: `bg-sage hover:bg-sage/90 text-white px-8 py-4 rounded-xl text-lg` with PlayIcon
+  - Manage in Library: text link `text-warm-black/40 hover:text-warm-black` with ArrowRightIcon + hover translate-x animation
+
+**Animation (framer-motion):**
+```tsx
+<motion.div
+  initial={{ opacity: 0, scale: 0.98 }}
+  animate={{ opacity: 1, scale: 1 }}
+  exit={{ opacity: 0 }}
+  transition={{ duration: 0.2 }}
+>
+```
+
+**Dependencies:**
+- `framer-motion` (added to package.json)
+- Lucide icons: `Sprout`, `Leaf`, `Flower2` (3-tier growth), `PlayIcon`, `ArrowRightIcon`
 
 **PracticePanel:**
 - Refactored from `Practice.tsx`
@@ -839,69 +915,257 @@ export const practiceApi = {
 
 ---
 
-## 6. Color Scheme
+## 6. Color Scheme — "Quiet Study" Theme
 
-Replace purple (#9333EA) with warm, muted tones:
+Replace the old purple (#9333EA) theme with a warm, muted "Quiet Study" palette. This is a **full replacement** — the old `primary-*` and `stone-*` custom tokens are removed entirely.
 
-```typescript
-// tailwind.config.ts
-theme: {
-  extend: {
-    colors: {
-      primary: {
-        50: '#f6f7f4',
-        100: '#e3e6dd',
-        // ... sage/olive green scale
-        500: '#7a8a68',  // Main primary color
-        600: '#6a7a58',
-        // ...
+### 6.1 Tailwind Config (`tailwind.config.js`)
+
+```javascript
+export default {
+  content: ['./index.html', './frontend/src/**/*.{js,ts,jsx,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        warm: {
+          offwhite: '#FAFAF8',   // page backgrounds
+          black: '#2A2A28',      // primary text
+          gray: '#E8E5E0',       // borders, dividers
+          muted: '#8A8A86',      // secondary text, placeholders
+        },
+        sage: {
+          DEFAULT: '#6B8F71',    // primary action color (buttons, active states, links)
+          tint: '#EDF2EE',       // light sage background (hover, active sidebar)
+        },
+        amber: {
+          DEFAULT: '#C4973B',    // warning/medium recency accent
+          tint: '#FBF5E8',       // light amber background
+        },
+        coral: {
+          DEFAULT: '#D4715E',    // danger/stale recency accent
+          tint: '#FDF0ED',       // light coral background
+        },
+        neutral: {
+          DEFAULT: '#A8A5A0',    // never-practiced, disabled states
+          tint: '#F2F1EF',       // light neutral background
+        },
       },
-      accent: {
-        50: '#fef6f1',
-        // ... muted amber/terracotta scale
-        500: '#d4956c',
-        // ...
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        serif: ['Lora', 'serif'],
       },
-      background: {
-        warm: '#fafaf9',  // stone-50
-        warmDark: '#f5f5f4',  // stone-100
-      }
+    },
+  },
+  plugins: [],
+}
+```
+
+**Removed tokens:**
+- `primary-*` (DEFAULT, 50-900) — old purple palette
+- Custom `stone-*` overrides — use Tailwind's built-in `stone-*` or `warm-*` tokens
+
+### 6.2 Theme Replacement Mapping
+
+All components must replace old color classes with the new theme tokens:
+
+| Old Class | New Class | Usage |
+|-----------|-----------|-------|
+| `bg-purple-600`, `bg-primary-600` | `bg-sage` | Primary buttons |
+| `bg-purple-700`, `bg-primary-700`, `hover:bg-purple-700` | `hover:bg-sage/90` | Button hover (use opacity) |
+| `bg-purple-100`, `bg-primary-100`, `bg-primary-50` | `bg-sage-tint` | Active/selected backgrounds |
+| `text-purple-600`, `text-primary-600` | `text-sage` | Links, active text, icons |
+| `text-purple-700`, `text-primary-700` | `text-sage` | Active text (same token) |
+| `border-purple-500`, `border-primary-500` | `border-sage` | Active borders |
+| `border-purple-300`, `border-primary-300` | `border-sage/50` | Hover borders |
+| `focus:ring-purple-500`, `focus:ring-primary-500` | `focus:ring-sage` | Focus rings on inputs |
+| `bg-purple-50`, `hover:bg-purple-50` | `hover:bg-sage-tint` | Hover backgrounds |
+| `text-stone-800` | `text-warm-black` | Primary text |
+| `text-stone-500`, `text-stone-600` | `text-warm-muted` | Secondary text |
+| `border-stone-200`, `border-stone-300` | `border-warm-gray` | Borders |
+| `bg-stone-50`, `bg-stone-100` | `bg-warm-offwhite` | Page/section backgrounds |
+| `disabled:bg-stone-300` | `disabled:bg-warm-gray` | Disabled buttons |
+
+### 6.3 Files Requiring Theme Replacement
+
+**M5 new components (use `primary-*`):**
+1. `pages/library/index.tsx` — buttons, modals, active states, focus rings
+2. `pages/home/DeckListPanel.tsx` — active deck highlight, buttons
+3. `pages/home/DeckDetailPanel.tsx` — progress ring, buttons
+4. `pages/home/PracticePanel.tsx` — chat UI, buttons
+5. `pages/home/EmptyDeckPlaceholder.tsx` — text, icons
+
+**Existing components (use `purple-*`):**
+6. `components/Sidebar.tsx` — active nav item
+7. `pages/Progress.tsx` — charts, stats
+8. `components/SessionSummary.tsx` — summary cards
+9. `pages/Settings.tsx` — form elements
+10. `pages/settings/EditApiKeyModal.tsx` — modal buttons
+11. `components/FeedbackCard.tsx` — score highlights
+12. `pages/Vocabulary.tsx` — _(being replaced by Library, but exists until deleted)_
+13. `pages/vocabulary/EditWordModal.tsx` — _(being moved to library/)_
+14. `pages/vocabulary/UploadModal.tsx` — _(being moved to library/)_
+15. `components/Pagination.tsx` — active page, buttons
+16. `pages/Register.tsx` — form, submit button
+17. `components/ProtectedRoute.tsx` — loading spinner
+18. `pages/Login.tsx` — form, submit button, links
+19. `pages/Welcome.tsx` — CTA buttons, hero section
+20. `test/Pagination.test.tsx` — test assertions for CSS classes
+
+### 6.4 Recency Colors (using new theme tokens)
+
+The recency color system uses the new theme tokens instead of Tailwind's built-in green/yellow/red:
+
+```tsx
+function getRecencyStyle(lastPracticedAt: string | null) {
+  if (!lastPracticedAt) {
+    return {
+      border: 'border-l-neutral',         // card left border
+      badgeBg: 'bg-neutral-tint',          // recency badge background
+      badgeText: 'text-neutral',           // recency badge text
+      progressFill: 'bg-neutral',          // progress bar fill
+      progressTrack: 'bg-neutral-tint',    // progress bar track
     }
+  }
+
+  const hours = (Date.now() - new Date(lastPracticedAt).getTime()) / 3_600_000
+
+  if (hours < 48) {
+    return {
+      border: 'border-l-sage',
+      badgeBg: 'bg-sage-tint',
+      badgeText: 'text-sage',
+      progressFill: 'bg-sage',
+      progressTrack: 'bg-sage-tint',
+    }
+  }
+  if (hours < 120) {
+    return {
+      border: 'border-l-amber',
+      badgeBg: 'bg-amber-tint',
+      badgeText: 'text-amber',
+      progressFill: 'bg-amber',
+      progressTrack: 'bg-amber-tint',
+    }
+  }
+  return {
+    border: 'border-l-coral',
+    badgeBg: 'bg-coral-tint',
+    badgeText: 'text-coral',
+    progressFill: 'bg-coral',
+    progressTrack: 'bg-coral-tint',
   }
 }
 ```
 
-Apply across all components:
-- Buttons: `bg-primary-500`, `hover:bg-primary-600`
-- Active states: `bg-primary-100`, `text-primary-700`
-- Highlights: `bg-accent-50`, `text-accent-600`
-- Backgrounds: `bg-background-warm`
+### 6.5 Sidebar Navigation Order
+
+Sidebar items top-to-bottom:
+1. Home
+2. **Library** _(moved above Report Card — higher usage frequency)_
+3. Report Card
+4. Settings
+
+Active state: `bg-sage-tint text-sage` (replaces `bg-purple-100 text-purple-600`)
+
+### 6.6 Library Deck Card — Inline Edit & Kebab Menu
+
+**Deck Card Visual Structure:**
+```
+┌─┬──────────────────────────────────────┐
+│▌│ Daily Conversations             ⋮    │  ← border-l-[3px] (recency color)
+│▌│                                      │
+│▌│ Everyday phrases and expressions     │  ← description (line-clamp-2)
+│▌│ for daily life situations            │
+│▌│                                      │
+│▌│ 234 words  ·  🌸 65% mastered       │  ← stats row
+│▌│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │  ← progress bar (recency fill + tint track)
+│▌│                                      │
+│▌│  2h ago                              │  ← recency badge pill
+└─┴──────────────────────────────────────┘
+```
+
+**Card dimensions:** `h-[240px]`, white background, rounded-lg, shadow-sm, `border-l-[3px]` with recency color
+
+**Kebab Menu (⋮):**
+- Positioned top-right, only visible on card hover
+- Dropdown items:
+  1. **Edit Deck** (PencilIcon) — enters inline edit mode
+  2. **Delete Deck** (Trash2Icon, text-coral) — shows delete confirmation
+
+**Inline Edit Mode:**
+When "Edit Deck" is clicked, the card transforms in-place:
+```
+┌─┬──────────────────────────────────────┐
+│▌│ ┌──────────────────────────────────┐ │  ← ring-2 ring-sage on card
+│▌│ │ Daily Conversations          ▊  │ │  ← input (auto-focus, select all)
+│▌│ └──────────────────────────────────┘ │
+│▌│ ┌──────────────────────────────────┐ │
+│▌│ │ Everyday phrases and            │ │  ← textarea (2 rows)
+│▌│ │ expressions for daily life...   │ │
+│▌│ └──────────────────────────────────┘ │
+│▌│                                      │
+│▌│              [Cancel]  [Save]        │  ← Cancel (text), Save (bg-sage)
+└─┴──────────────────────────────────────┘
+```
+
+**Inline Edit Behavior:**
+- Name becomes `<input>` with auto-focus and select-all
+- Description becomes `<textarea>` (2 rows)
+- Card gets `ring-2 ring-sage` highlight
+- Keyboard shortcuts: **Enter** saves, **Esc** cancels
+- Save calls `PUT /api/decks/:id` with `{name, description}`
+- Cancel restores original values
+
+**Delete Confirmation:**
+When "Delete Deck" is clicked:
+```
+confirm(`Delete "${deckName}"? This will permanently delete ${wordCount} word${wordCount !== 1 ? 's' : ''}. This cannot be undone.`)
+```
 
 ---
 
 ## 7. Growth Icons & Recency Colors
 
 **Growth Icon Logic (3 stages based on mastery %):**
+
+Two implementations depending on context:
+
+**Emoji version** (Library deck cards, stats text):
 ```tsx
-function getGrowthIcon(masteryPercentage: number): string {
-  // Mastery % = (mastered_count / word_count) * 100
+function getGrowthEmoji(masteryPercentage: number): string {
   if (masteryPercentage < 25) return '🌱'  // Seedling
-  if (masteryPercentage < 75) return '🌿'  // Leaves
-  return '🌸'  // Flower
+  if (masteryPercentage < 75) return '🌿'  // Growing
+  return '🌸'  // Blooming
 }
 ```
+
+**Lucide icon version** (Home DeckListItem avatar):
+```tsx
+import { Sprout, Leaf, Flower2 } from 'lucide-react'
+
+function getGrowthIcon(masteryPercentage: number) {
+  if (masteryPercentage < 25) return <Sprout size={20} strokeWidth={2} />   // Seedling
+  if (masteryPercentage < 75) return <Leaf size={20} strokeWidth={2} />     // Growing
+  return <Flower2 size={20} strokeWidth={2} />                              // Blooming
+}
+```
+
+| Stage | Range | Emoji | Lucide Icon | Label |
+|-------|-------|-------|-------------|-------|
+| Seedling | 0-24% | 🌱 | `<Sprout>` | Seedling |
+| Growing | 25-74% | 🌿 | `<Leaf>` | Growing |
+| Blooming | 75-100% | 🌸 | `<Flower2>` | Blooming |
 
 **Recency Color Logic:**
-```tsx
-function getRecencyColor(lastPracticedAt: string | null): string {
-  if (!lastPracticedAt) return 'text-stone-400'  // grey - never practiced
 
-  const hoursSince = (Date.now() - new Date(lastPracticedAt).getTime()) / (1000 * 60 * 60)
-  if (hoursSince < 48) return 'text-green-500'    // green
-  if (hoursSince < 120) return 'text-yellow-500'  // yellow
-  return 'text-red-500'                           // red
-}
-```
+Uses new theme tokens. See Section 6.4 for the full `getRecencyStyle()` implementation returning `{ border, badgeBg, badgeText, progressFill, progressTrack }` using sage/amber/coral/neutral tokens.
+
+| Recency | Thresholds | Theme Token |
+|---------|-----------|-------------|
+| Fresh | <48h | `sage` / `sage-tint` |
+| Stale | 48-120h | `amber` / `amber-tint` |
+| Overdue | >120h | `coral` / `coral-tint` |
+| Never practiced | null | `neutral` / `neutral-tint` |
 
 ---
 
@@ -975,7 +1239,7 @@ Body: { quality: number }  // 0-5
 
   <button
     onClick={handleMarkAsMastered}
-    className="mark-as-mastered-button text-sm text-primary-600 hover:text-primary-700"
+    className="mark-as-mastered-button text-sm text-sage hover:text-sage/80"
   >
     {currentWord.marked_as_known ? 'Unmark as Mastered' : '✓ Mark as Mastered'}
   </button>

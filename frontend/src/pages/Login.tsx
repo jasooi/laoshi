@@ -32,7 +32,7 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sage-tint via-pink-50 to-blue-100 p-4">
       <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full">
         <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
           Welcome back
@@ -60,7 +60,7 @@ const Login = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Enter your username"
             />
           </div>
@@ -76,7 +76,7 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Enter your password"
             />
           </div>
@@ -84,7 +84,7 @@ const Login = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-sage hover:bg-sage/80 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Logging in...' : 'Log in'}
           </button>
@@ -92,7 +92,7 @@ const Login = () => {
 
         <p className="text-center mt-6 text-gray-600">
           Don't have an account?{' '}
-          <Link to="/register" className="text-purple-600 hover:text-purple-700 font-medium">
+          <Link to="/register" className="text-sage hover:text-sage/80 font-medium">
             Register
           </Link>
         </p>

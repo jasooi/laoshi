@@ -27,7 +27,13 @@
       "Bash(\"../laoshivenv/Scripts/python\" -m pytest tests/test_practice_api.py -v)",
       "Bash(\"laoshivenv/Scripts/python\" -c \"\nfrom agents.extensions.memory import RedisSession\nimport inspect\nprint\\(inspect.getsource\\(RedisSession\\)\\)\n\")",
       "Bash(wc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx vite build:*)",
+      "Bash(pushd:*)",
+      "Bash(flask db:*)"
     ]
+  },
+  "enabledPlugins": {
+    "superpowers-extended-cc@superpowers-extended-cc-marketplace": true
   }
 }

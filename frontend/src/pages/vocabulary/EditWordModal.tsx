@@ -9,7 +9,7 @@ interface EditWordModalProps {
 }
 
 const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => {
-  const [editForm, setEditForm] = useState({ word: '', pinyin: '', meaning: '', source_name: '' })
+  const [editForm, setEditForm] = useState({ word: '', pinyin: '', meaning: '', notes: '' })
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
 
@@ -19,7 +19,7 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
         word: word.word,
         pinyin: word.pinyin,
         meaning: word.meaning,
-        source_name: word.source_name || '',
+        notes: word.notes || '',
       })
       setEditError(null)
     }
@@ -40,8 +40,8 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
         pinyin: editForm.pinyin.trim(),
         meaning: editForm.meaning.trim(),
       }
-      if (editForm.source_name.trim()) {
-        payload.source_name = editForm.source_name.trim()
+      if (editForm.notes.trim()) {
+        payload.notes = editForm.notes.trim()
       }
       const response = await api.put(`/api/words/${word.id}`, payload)
       const updatedWord = response.data as Word
@@ -79,7 +79,7 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
               type="text"
               value={editForm.word}
               onChange={(e) => setEditForm({ ...editForm, word: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
             />
           </div>
           <div>
@@ -88,7 +88,7 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
               type="text"
               value={editForm.pinyin}
               onChange={(e) => setEditForm({ ...editForm, pinyin: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
             />
           </div>
           <div>
@@ -97,16 +97,16 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
               type="text"
               value={editForm.meaning}
               onChange={(e) => setEditForm({ ...editForm, meaning: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Source Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
             <input
               type="text"
-              value={editForm.source_name}
-              onChange={(e) => setEditForm({ ...editForm, source_name: e.target.value })}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              value={editForm.notes}
+              onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
             />
           </div>
         </div>
@@ -129,7 +129,7 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
           <button
             onClick={handleEditSubmit}
             disabled={editSaving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/80 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
           >
             {editSaving && (
               <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

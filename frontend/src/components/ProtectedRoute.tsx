@@ -12,8 +12,8 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100">
-        <div className="text-purple-600 text-lg font-medium">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sage-tint via-pink-50 to-blue-100">
+        <div className="text-sage text-lg font-medium">Loading...</div>
       </div>
     )
   }

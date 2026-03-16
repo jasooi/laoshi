@@ -254,10 +254,12 @@ def get_deck_words(deck_id):
     query = query.order_by(sort_column)
 
     # Paginate
-    result = paginate_query(query, page, per_page)
+    items, pagination = paginate_query(query, page, per_page)
 
-    # Format words
-    result['data'] = [word.format_data(viewer=user) for word in result['data']]
+    result = {
+        'data': [word.format_data(viewer=user) for word in items],
+        'pagination': pagination,
+    }
 
     return jsonify(result), 200
 
@@ -289,7 +291,7 @@ def add_words_to_deck(deck_id):
         word_text = word_data.get('word', '').strip()
         pinyin = word_data.get('pinyin', '').strip()
         meaning = word_data.get('meaning', '').strip()
-        source_name = word_data.get('source_name', '').strip() or None
+        notes = word_data.get('notes', '').strip() or None
 
         if not word_text or not pinyin or not meaning:
             errors.append(f'Word at index {idx}: word, pinyin, and meaning are required')
@@ -299,7 +301,7 @@ def add_words_to_deck(deck_id):
             word=word_text,
             pinyin=pinyin,
             meaning=meaning,
-            source_name=source_name,
+            notes=notes,
             user_id=user.id,
             deck_id=deck_id,
             # SRS fields use defaults
@@ -382,7 +384,7 @@ def combine_decks():
                 word=source_word.word,
                 pinyin=source_word.pinyin,
                 meaning=source_word.meaning,
-                source_name=source_word.source_name,
+                notes=source_word.notes,
                 user_id=user.id,
                 deck_id=new_deck.id,
                 # Copy SRS state

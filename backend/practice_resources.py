@@ -3,7 +3,7 @@ from flask import request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from models import User, UserSession, SessionWord
+from models import User, UserSession, SessionWord, Deck
 from ai_layer.practice_runner import initialize_session, handle_message, advance_word, complete_session
 
 # Maximum message length to prevent abuse
@@ -34,6 +34,52 @@ class PracticeSessionResource(Resource):
         if error:
             return {'error': error}, 400
         return result, 201
+
+
+class PracticeSessionDetailResource(Resource):
+    @jwt_required()
+    def get(self, id):
+        """Get an existing practice session by ID."""
+        user_id = int(get_jwt_identity())
+        user = User.get_by_id(user_id)
+        session = UserSession.get_by_id(id)
+
+        if not session or session.user_id != user_id:
+            return {'error': 'Session not found'}, 404
+
+        session_words = SessionWord.get_list_by_session_id(id)
+        words_practiced = sum(1 for sw in session_words if sw.status == 1)
+        words_total = len(session_words)
+
+        # Find current word (first pending word by order)
+        current_word = None
+        for sw in sorted(session_words, key=lambda sw: sw.word_order):
+            if sw.status == 0:
+                w = sw.word
+                current_word = {
+                    'word_id': w.id,
+                    'word': w.word,
+                    'pinyin': w.pinyin,
+                    'meaning': w.meaning,
+                }
+                break
+
+        # Get deck name
+        deck_name = None
+        if session.deck_id:
+            deck = Deck.get_by_id(session.deck_id)
+            if deck:
+                deck_name = deck.name
+
+        session_data = session.format_data(user)
+        session_data['words_practiced'] = words_practiced
+        session_data['words_total'] = words_total
+
+        return {
+            'session': session_data,
+            'current_word': current_word,
+            'deck_name': deck_name,
+        }, 200
 
 
 class PracticeMessageResource(Resource):

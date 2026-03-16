@@ -5,7 +5,7 @@ export interface Word {
   word: string
   pinyin: string
   meaning: string
-  source_name: string | null
+  notes: string | null
   deck_id: number | null
   // SRS fields
   repetitions: number
@@ -94,6 +94,7 @@ export interface PracticeSession {
 }
 
 export interface PracticeResponse {
+  word_id: number
   target_word: string
   target_pinyin: string
   target_english: string
@@ -104,6 +105,8 @@ export interface PracticeResponse {
   words_practiced: number
   words_total: number
   is_session_complete: boolean
+  is_mastered: boolean
+  marked_as_known: boolean
 }
 
 export interface PracticeMessageResponse {

@@ -33,7 +33,7 @@ const Progress = () => {
   if (loading) {
     return (
       <div className="p-8 max-w-6xl mx-auto flex items-center justify-center min-h-[500px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage" />
       </div>
     )
   }
@@ -43,14 +43,14 @@ const Progress = () => {
     return (
       <div className="p-8 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
-          <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
           <h1 className="text-3xl font-semibold text-gray-900">Report Card</h1>
         </div>
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 flex flex-col items-center justify-center min-h-[500px]">
-          <div className="w-32 h-32 rounded-full bg-purple-100 flex items-center justify-center mb-6">
-            <svg className="w-16 h-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-32 h-32 rounded-full bg-sage-tint flex items-center justify-center mb-6">
+            <svg className="w-16 h-16 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
@@ -58,7 +58,7 @@ const Progress = () => {
           <p className="text-gray-500 text-lg mb-6">Complete a practice session to see your Report Card.</p>
           <Link
             to="/practice"
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
+            className="px-6 py-3 bg-sage text-white rounded-lg font-medium hover:bg-sage/80 transition-colors"
           >
             Start Practicing
           </Link>
@@ -101,7 +101,7 @@ const Progress = () => {
       detail: scores.grammar,
       tooltipText: 'Evaluates word order, grammatical particles, verb aspect markers, and measure words.',
       icon: (
-        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
@@ -112,7 +112,7 @@ const Progress = () => {
       detail: scores.usage,
       tooltipText: 'Evaluates whether the vocabulary word is used with correct meaning, context, and collocations.',
       icon: (
-        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       ),
@@ -123,7 +123,7 @@ const Progress = () => {
       detail: scores.naturalness,
       tooltipText: 'Evaluates how native-like the expression sounds, including idiomatic usage.',
       icon: (
-        <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
@@ -134,7 +134,7 @@ const Progress = () => {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
-        <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-8 h-8 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
         <h1 className="text-3xl font-semibold text-gray-900">Report Card</h1>
@@ -145,8 +145,8 @@ const Progress = () => {
         {/* Time Practiced */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-10 h-10 rounded-xl bg-sage-tint flex items-center justify-center">
+              <svg className="w-5 h-5 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -216,7 +216,7 @@ const Progress = () => {
             onClick={() => setActiveTab('feedback')}
             className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'feedback'
-                ? 'border-purple-600 text-purple-600'
+                ? 'border-sage text-sage'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -226,7 +226,7 @@ const Progress = () => {
             onClick={() => setActiveTab('scores')}
             className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'scores'
-                ? 'border-purple-600 text-purple-600'
+                ? 'border-sage text-sage'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -266,7 +266,7 @@ const Progress = () => {
                 {scoreCards.map(({ key, label, detail, tooltipText, icon }) => (
                   <div key={key} className="border border-gray-200 rounded-xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-sage-tint flex items-center justify-center">
                         {icon}
                       </div>
                       <button
@@ -278,7 +278,7 @@ const Progress = () => {
                       </button>
                     </div>
                     {showTooltip[key] && (
-                      <div className="mb-3 p-2 bg-purple-50 rounded-lg text-xs text-purple-700">
+                      <div className="mb-3 p-2 bg-sage-tint rounded-lg text-xs text-sage">
                         {tooltipText}
                       </div>
                     )}

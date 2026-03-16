@@ -94,7 +94,7 @@ const Pagination = ({
               onClick={() => onPageChange(item)}
               className={`px-3 py-1.5 text-sm min-w-[2rem] rounded-lg ${
                 item === page
-                  ? 'bg-purple-600 text-white'
+                  ? 'bg-sage text-white'
                   : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -123,7 +123,7 @@ const Pagination = ({
         <select
           value={perPage}
           onChange={(e) => onPerPageChange(Number(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sage"
         >
           {perPageOptions.map((option) => (
             <option key={option} value={option}>

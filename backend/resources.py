@@ -5,7 +5,7 @@ from flask import request, make_response
 from flask_restful import Resource
 from http import HTTPStatus
 from models import Word, User, SessionWord, UserSession, TokenBlocklist
-from datetime import datetime
+from datetime import datetime, date
 from utils import hash_password, check_password, paginate_query
 from extensions import db
 from flask_jwt_extended import (
@@ -55,7 +55,7 @@ WORD_FIELD_LIMITS = {
     'word': 150,
     'pinyin': 150,
     'meaning': 300,
-    'source_name': 200,
+    'notes': 200,
 }
 
 
@@ -136,7 +136,7 @@ class WordResource(Resource):
         if err:
             return {"error": err}, 400
 
-        allowable_fields = ["word", "pinyin", "meaning", "source_name"]
+        allowable_fields = ["word", "pinyin", "meaning", "notes"]
         fields_to_update = [k for k in data.keys() if k in allowable_fields]
 
         if len(fields_to_update) == 0:
@@ -371,7 +371,8 @@ class UserResource(Resource):
                 
 
 class SessionListResource(Resource):
-    # TODO: add get by date range parameters
+    # DEPRECATED: No longer registered in app.py. Replaced by PracticeSessionResource
+    # in practice_resources.py (POST /api/practice/sessions).
 
     @jwt_required()
     def get(self):
@@ -409,6 +410,8 @@ class SessionListResource(Resource):
 
 
 class SessionResource(Resource):
+    # DEPRECATED: No longer registered in app.py. Replaced by PracticeSessionDetailResource
+    # in practice_resources.py (GET /api/practice/sessions/<id>).
     @jwt_required()
     def get(self, id: int):
         vc_user = User.get_by_id(int(get_jwt_identity()))
@@ -471,6 +474,8 @@ class SessionResource(Resource):
 
 
 class SessionWordListResource(Resource):
+    # DEPRECATED: No longer registered in app.py. Session words are now managed internally
+    # by practice_runner.py (initialize_session, advance_word).
     @jwt_required()
     def get(self, session_id: int):
         vc_user = User.get_by_id(int(get_jwt_identity()))
@@ -528,6 +533,8 @@ class SessionWordListResource(Resource):
 
 
 class SessionWordResource(Resource):
+    # DEPRECATED: No longer registered in app.py. Session words are now managed internally
+    # by practice_runner.py (initialize_session, advance_word).
     @jwt_required()
     def get(self, session_id: int, word_id: int):
         vc_user = User.get_by_id(int(get_jwt_identity()))
@@ -672,3 +679,52 @@ class MeResource(Resource):
             return {"error": str(e)}, 500
 
         return found_user.format_data(found_user), 200
+
+
+class RerateWordResource(Resource):
+    @jwt_required()
+    def post(self, id):
+        """Rerate a word by restoring SRS snapshot and applying new quality."""
+        user_id = int(get_jwt_identity())
+        data = request.get_json(silent=True) or {}
+
+        quality = data.get('quality')
+        session_id = data.get('session_id')
+
+        if quality is None or session_id is None:
+            return {'error': 'quality and session_id are required'}, 400
+        if not isinstance(quality, int) or quality < 0 or quality > 5:
+            return {'error': 'quality must be an integer between 0 and 5'}, 400
+
+        # Verify word belongs to user
+        word = Word.get_by_id(id)
+        if not word or word.user_id != user_id:
+            return {'error': 'Word not found'}, 404
+
+        # Get the session word to find the snapshot
+        session_word = SessionWord.get_by_session_word_id(id, session_id)
+        if not session_word:
+            return {'error': 'Session word not found'}, 404
+
+        if not session_word.srs_snapshot:
+            return {'error': 'No SRS snapshot available for this word'}, 400
+
+        # Restore SRS state from snapshot
+        snapshot = session_word.srs_snapshot
+        word.repetitions = snapshot['repetitions']
+        word.interval_days = snapshot['interval_days']
+        word.ease_factor = snapshot['ease_factor']
+        word.next_review_date = (
+            date.fromisoformat(snapshot['next_review_date'])
+            if snapshot['next_review_date'] else None
+        )
+        word.is_mastered = snapshot['is_mastered']
+        word.last_quality = snapshot['last_quality']
+
+        # Apply new quality rating
+        word.last_quality = quality
+        word.update_srs(quality)
+        word.update_mastery_status()
+        word.update()
+
+        return {'word': word.format_data(viewer=User.get_by_id(user_id))}, 200

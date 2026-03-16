@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-white text-gray-800 antialiased;
+    @apply bg-warm-offwhite text-warm-black antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
@@ -13,11 +13,29 @@
 
 @layer components {
   .sidebar-icon {
-    @apply w-10 h-10 flex items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-primary transition-colors cursor-pointer;
+    @apply w-10 h-10 flex items-center justify-center rounded-lg text-warm-muted hover:bg-warm-offwhite hover:text-sage transition-colors cursor-pointer;
   }
   
   .sidebar-icon.active {
-    @apply bg-primary/10 text-primary;
+    @apply bg-sage-tint text-sage;
   }
+}
+
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-pulse-scale {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in-up 300ms ease-out;
 }
 

@@ -1,0 +1,469 @@
+
+
+---
+
+# Laoshi Practice Chat Screen — Design Specification
+
+## 1. Overview
+
+The practice chat is a full-screen immersive conversation interface where users practice Chinese vocabulary with an AI tutor named "Laoshi." The screen takes over the entire viewport when a practice session begins, creating a focused environment that mirrors the mental model of a messaging app — you enter a conversation, you focus, you leave when done.
+
+The full user journey through practice is: **Home → Loading Ritual → Practice Chat → Session Summary → Home**.
+
+---
+
+## 2. Screen Architecture
+
+The practice chat is rendered as a **fixed full-screen overlay** (`position: fixed; inset: 0; z-index: 50`) that covers the entire application including the home screen's deck list. It is NOT rendered inside the home layout — it sits above it in the DOM.
+
+### Layout Structure (top to bottom, left to right)
+
+```
+┌──────────────────────────────────────────────────────┐
+│ [Sidebar] │ [Main Chat Column]                       │
+│  64px     │  flex-1                                  │
+│           │ ┌──────────────────────────────────────┐ │
+│  Logo     │ │ Progress Bar (3px)                   │ │
+│  Home     │ ├──────────────────────────────────────┤ │
+│  Library  │ │ Chat Header (56px)                   │ │
+│  Report   │ │   ← Back  [Avatar] Laoshi   Deck 1/5│ │
+│           │ ├──────────────────────────────────────┤ │
+│           │ │ Chat Area (flex-1, scrollable)       │ │
+│           │ │   [Sticky Word Pill]                 │ │
+│           │ │   [Messages...]                      │ │
+│           │ │   [Rating Prompt]                    │ │
+│           │ │   [Word Divider]                     │ │
+│           │ ├──────────────────────────────────────┤ │
+│  Settings │ │ Input Area (fixed bottom)            │ │
+│           │ └──────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────┘
+```
+
+**Outer container:** `fixed inset-0 z-50 flex` with background `#F5F3EE`.
+
+**Sidebar:** The same navigation sidebar used on the home screen (64px wide, dark charcoal background, icon buttons for Home/Library/Report Card/Settings). It persists across the practice screen to maintain spatial consistency.
+
+**Main chat column:** `flex-1 flex flex-col min-w-0` — takes remaining width after sidebar.
+
+---
+
+## 3. Progress Bar
+
+- Position: Top of the main chat column, above the header
+- Height: **3px**
+- Background track: `warm-gray` at 30% opacity
+- Fill: `sage` green (`#6B8F71`)
+- Width: Percentage based on `currentWordIndex / totalWords * 100`
+- Transition: `width` animates over 500ms with ease-out
+- The bar starts at 0% and fills as the user completes words
+
+---
+
+## 4. Chat Header
+
+- Height: **56px** (`h-14`)
+- Background: `white` at 90% opacity with `backdrop-blur-sm`
+- Border: Bottom border, `warm-gray` at 50% opacity
+- Content is constrained to `max-width: 48rem` (768px), centered with `mx-auto`, with `px-6` horizontal padding — this aligns the header content with the chat messages below
+
+### Left side (flex row, gap 12px):
+1. **Back button:** Chevron-left icon (18px). Muted color (`warm-black/50`), darkens on hover. Clicking triggers the End Session Modal (not immediate navigation).
+2. **Laoshi identity:**
+   - Avatar: 32px circle, `warm-offwhite` background, `warm-gray/50` border, contains the Laoshi logo image (24px, `object-contain`)
+   - Name: "Laoshi" — 14px, font-weight medium, `warm-black`
+   - Status: Green dot (6px circle, `green-500`) + "Online" text (10px, `green-600`, font-weight medium)
+
+### Right side:
+- **Deck name:** 11px, `warm-black/50`, font-weight medium, right-aligned, `display: block`
+- **Word counter:** 10px, `warm-black/30`, e.g. "1 / 5"
+- These stack vertically (deck name on top, counter below)
+
+---
+
+## 5. Floating Word Pill
+
+The word pill is a **sticky element** pinned to the top of the scrollable chat area. It floats above the messages and has two states: collapsed (default) and expanded.
+
+### Container
+- Position: `sticky top-0 z-10`
+- Centered horizontally with `flex justify-center`
+- Padding: `px-6 pt-3 pb-2`
+- Background: Linear gradient from `rgba(245,243,238,0.95)` at 60% to `transparent` — this creates a soft fade so the pill doesn't have a hard edge against the chat background
+
+### Collapsed State (default)
+- Shape: Fully rounded (`border-radius: 9999px` / pill shape)
+- Background: `white`
+- Border: `warm-gray` at 60% opacity, 1px solid
+- No shadow
+- Cursor: pointer
+- Hover: border darkens to full `warm-gray`
+- Content (horizontal row, gap 12px, padding `px-5 py-2`):
+  - Chinese character: **20px**, serif font, `warm-black`, font-weight medium
+  - Pinyin: 14px, `warm-black/40`
+  - Em dash: `warm-black/20`
+  - English meaning: 14px, `warm-black/50`, truncated at 240px max-width with ellipsis
+  - Chevron-down icon: 14px, `warm-black/25`
+- Clicking anywhere on the pill expands it
+
+### Expanded State
+- Shape: `border-radius: 16px` (rounded-2xl)
+- Width: `max-width: 42rem` (672px), full width of container
+- Background: `white`
+- Border: Same as collapsed
+- No shadow
+- Cursor: default
+- Padding: 24px
+- Layout: Two-column flex row with 32px gap
+
+**Left column** (flex-shrink-0, min-width 100px, vertically centered):
+- Character: **48px** (text-5xl), serif font, `warm-black`, `line-height: 1`, margin-bottom 8px
+- Pinyin: 14px, `sage` green, font-weight medium
+
+**Right column** (flex-1, min-width 0):
+- English meaning: 16px, `warm-black/80`, `line-height: relaxed` (1.625), margin-bottom 16px
+- **User note block** (conditional — only shown if note exists):
+  - Background: secondary background tint
+  - Label: "Your note" in tertiary/muted text above
+  - Note text below
+  - If no note exists, this entire block is hidden
+- **Image thumbnails** (conditional — only shown if images exist):
+  - Row of 36–40px squares with rounded corners
+  - If no images, row is hidden
+- Toggle buttons row (gap 8px):
+  - Two 28px square buttons ("拼" and "文")
+  - Background: `warm-offwhite`, border `warm-gray/60`, 1px
+  - Text: 12px, font-weight medium, `warm-black/70`
+  - Hover: background changes to `white`
+
+**Collapse button** (top-right of expanded card):
+- Self-aligned to start (top)
+- Padding: 6px
+- Chevron-up icon, 16px
+- Color: `warm-black/30`, hover `warm-black/60`
+
+### Animations
+- **Expand/collapse:** Uses Framer Motion `layout` animation. Duration 280ms, cubic-bezier `[0.25, 0.1, 0.25, 1]`. The pill smoothly grows in width and height.
+- **Content transition:** Collapsed content fades out (150ms), expanded content fades in (200ms, 100ms delay after expand starts). Reverse on collapse.
+- **Word change:** When advancing to the next word, the current pill content exits sliding left (opacity 0, x: -40, 250ms ease-out), and the new word enters sliding in from the right (opacity 0→1, x: 40→0).
+- **Click outside to collapse:** A `mousedown` event listener on the document checks if the click target is outside the pill ref. If so, collapse.
+
+---
+
+## 6. Chat Messages
+
+Messages are rendered in a scrollable area below the sticky pill. Content is constrained to `max-width: 48rem` (768px), centered with `mx-auto`.
+
+### AI Messages (left-aligned)
+- Layout: Flex row, `justify-start`
+- **Avatar:** 28px circle to the left of the bubble, aligned to the bottom of the bubble (with 20px bottom margin to account for the timestamp). Same Laoshi logo as header but at 20px size.
+- **Bubble:**
+  - Background: `white`
+  - Border: `warm-gray/40`, 1px solid
+  - Shadow: `shadow-sm`
+  - Border radius: `16px` on all corners except top-left which is `2px` (rounded-tl-sm) — this creates the "speech tail" effect
+  - Padding: `px-4 py-3`
+  - Text: 15px, `warm-black`, `line-height: relaxed`
+  - Max width: 75% of container
+- **Timestamp:** Below the bubble, left-aligned, 10px, `warm-black/30`, margin-top 4px
+
+### User Messages (right-aligned)
+- Layout: Flex row, `justify-end`
+- No avatar
+- **Bubble:**
+  - Background: `sage` green (`#6B8F71`)
+  - No border
+  - Text: 15px, `white`, `line-height: relaxed`
+  - Border radius: `16px` on all corners except top-right which is `2px`
+  - Padding: `px-4 py-3`
+  - Max width: 75% of container
+- **Timestamp:** Below the bubble, right-aligned, same styling as AI timestamps
+
+### Typing Indicator
+- Shown when status is `ai_typing` or `rating_typing`
+- Layout: Same as AI message (avatar + bubble)
+- Bubble: `white` background, `warm-gray/50` border, `shadow-sm`, height 46px
+- Content: Three bouncing dots (6px circles, `warm-black/30`)
+  - Staggered animation delays: 0ms, 150ms, 300ms
+  - Uses CSS `animate-bounce`
+- Entrance: Fades in (opacity 0→1)
+
+### Message Animation
+- All messages enter with: opacity 0→1, y: 10→0, duration 200ms
+- Auto-scroll: `messagesEndRef.scrollIntoView({ behavior: 'smooth' })` triggers whenever messages, status, rating selection, or divider state changes
+
+---
+
+## 7. Confidence Rating Flow
+
+This is the core interaction that happens between completing a word and advancing to the next one.
+
+### State Machine
+```
+feedback_given → [click "Next Word"] → rating_typing → [800ms delay] → awaiting_rating → [click rating] → rating_selected → [500ms delay] → transitioning/session_complete
+```
+
+### Step 1: Trigger
+When the user clicks "Next Word" in the input area:
+- Status changes to `rating_typing`
+- The typing indicator appears (Laoshi is "typing")
+- After **800ms**, status changes to `awaiting_rating`
+
+### Step 2: Rating Prompt Message
+Appears as a Laoshi message with interactive buttons attached.
+
+**Message bubble (top part):**
+- Same styling as a normal AI message bubble EXCEPT:
+  - When buttons are visible: bottom-left corner radius is `4px` (not 16px), bottom-right is `16px`. This visually merges the bubble into the button row.
+  - When buttons are collapsed (after selection): normal `16px` radius on all corners
+- Text: "Before we move on — how confident are you using **WORD**?" (the character is in serif font, font-weight medium)
+- Has a Laoshi avatar to the left, same as regular messages
+
+**Button row (bottom part):**
+- Directly attached to the bubble (no gap). Connected via `border border-t-0` (shares the bubble's side/bottom borders, no top border)
+- Bottom corners: `16px` radius (rounded-b-2xl)
+- Background: `white`, `shadow-sm`
+- Contains **5 buttons** in a single horizontal row, each `flex-1`:
+  - Minimum height: **56px** (comfortable tap target)
+  - Content: Large number (18px, font-weight medium, `warm-black`) + label below (10px, `warm-black/40`, font-weight medium)
+  - Labels: 1="No clue", 2="Shaky", 3="Okay", 4="Good", 5="Natural"
+  - Borders: Vertical dividers between buttons (`border-r border-warm-gray/30`), last button has no right border
+  - Hover: background `warm-offwhite/80`
+
+### Step 3: Selection
+When a button is tapped:
+1. **Highlight** (150ms): The tapped button background changes to `sage/15` (green tint)
+2. **After 150ms**, `onRate` fires:
+   - Status → `rating_selected`
+   - The button row animates out: opacity 0, height 0, duration 250ms ease-in-out
+   - An **inline pill** appears inside the message text: `"4 — Good"` in a rounded-full badge
+     - Background: `sage/15`
+     - Text: `sage` green, 12px, font-weight medium
+     - Padding: `px-2.5 py-0.5`
+     - Appears with scale 0.8→1 and opacity 0→1, duration 200ms, 50ms delay
+   - The message bubble corners return to normal `16px` radius
+
+### Step 4: Transition to Next Word
+After **500ms** from rating selection:
+- **If NOT the last word:**
+  - A **word divider** appears: thin horizontal line (`warm-gray/50`, 1px) with centered text "next word" (11px, `warm-black/25`, font-weight medium, letter-spacing wide). Fades in over 300ms.
+  - Status → `transitioning`
+  - After **600ms**, `currentWordIndex` increments, which triggers the word introduction flow (typing indicator → new word message)
+  - The word pill transitions to the new character (slide-out-left, slide-in-right)
+- **If the LAST word:**
+  - Status → `ai_typing`
+  - After **800ms**, Laoshi sends a wrap-up message: "Nice session! You practiced 5 words today. Your tutor is impressed — let's see how you did!"
+  - Status → `session_complete`
+  - The input area transforms into a "View Session Summary" button
+
+### Input Area Lock
+While the rating is active (status is `rating_typing`, `awaiting_rating`, `rating_selected`, `transitioning`, or `session_complete`):
+- The text input is replaced with a **locked state**: a rounded container (`warm-offwhite/60` background, `warm-gray/50` border, `rounded-2xl`, `py-5`, 60% opacity)
+- Centered text: "Rate your confidence to continue" (14px, `warm-black/40`)
+- No overlay, no blocking modal — just a gentle visual lock
+
+---
+
+## 8. Input Area
+
+Position: Fixed at the bottom of the main column. White background, top border `warm-gray/50`, padding `px-6 py-4`. Content constrained to `max-width: 48rem`, centered.
+
+### Normal State (when `status` is `waiting_for_user` or `feedback_given`)
+A compound input container with rounded corners:
+
+**Text area (top):**
+- Background: `warm-offwhite`
+- Border: `warm-gray`, 1px. On focus: border changes to `sage`, plus a 1px `sage` ring
+- Border radius: `16px` (rounded-2xl)
+- Padding: 16px
+- Min height: 80px
+- Placeholder: "Type your sentence here..."
+- Disabled when status is not `waiting_for_user` (50% opacity)
+- Enter key (without Shift) submits; Shift+Enter creates a new line
+
+**Action bar (bottom, inside the container):**
+- Background: `white`
+- Top border: `warm-gray/50`
+- Padding: `px-4 py-2.5`
+- Layout: Space-between flex row
+
+Left side:
+- **"Next Word" button:** Chevrons-right icon (16px) + "Next Word" text (14px, font-weight medium)
+- Color: `warm-black/50`, hover `warm-black`
+- Disabled when status is not `feedback_given` (30% opacity)
+
+Right side (flex row, gap 16px):
+- **Character count:** "0 characters" (12px, `warm-black/40`)
+- **Submit button:** Pill-shaped (`rounded-full`), `px-6 py-2`
+  - Default: `warm-gray/50` background, `warm-black/50` text
+  - Hover: `sage` background, `white` text
+  - Disabled: 50% opacity, hover colors don't apply
+  - Contains: "Submit" text + Send icon (14px)
+
+### Session Complete State
+The input area is replaced with a centered button:
+- "View Session Summary" with Home icon (18px)
+- Background: `sage`, hover `sage/90`
+- Text: `white`, font-weight medium
+- Padding: `px-8 py-3.5`, `rounded-xl`
+- Shadow: `shadow-sm`
+- Entrance animation: opacity 0→1, y: 8→0
+
+---
+
+## 9. End Session Modal
+
+Triggered by clicking the back chevron in the header.
+
+**Backdrop:** `fixed inset-0 z-[60]`, `warm-black/20` background, `backdrop-blur-sm`
+
+**Modal card:** Centered, `max-width: 28rem` (448px), `white` background, `rounded-2xl`, `shadow-xl`, padding 32px
+
+**Content:**
+1. **Icon + Title row** (flex, gap 16px, margin-bottom 24px):
+   - Yellow circle: 48px, `yellow-100` background, contains Alert-triangle icon (24px, `yellow-600`)
+   - Title: "End Current Session?" — 20px, font-weight medium, `warm-black`
+2. **Body text** (margin-bottom 32px):
+   - "You have an active practice session. Ending it will save your progress so far. Are you sure you want to continue?"
+   - 16px, `warm-black/60`, `line-height: relaxed`
+3. **Buttons** (flex row, right-aligned, gap 16px):
+   - "Cancel": Text button, `px-6 py-2.5`, `warm-black/60`, hover `warm-black`
+   - "End Session": `px-6 py-2.5`, background `#EF4444`, hover `#DC2626`, `white` text, `rounded-xl`, `shadow-sm`
+
+**Animation:** Backdrop fades in (opacity). Modal scales 0.95→1, opacity 0→1, y: 10→0. Reverse on exit.
+
+---
+
+## 10. Loading Ritual Screen
+
+Shown between clicking "Start Practice" on the deck lobby and entering the practice chat.
+
+**Container:** `fixed inset-0 z-50`, `warm-offwhite` background, flex column centered.
+
+**Content:**
+1. **Laoshi logo:** 128px container (rounded-2xl, `shadow-lg`, `white` background), logo image at 96px
+   - Pulsing animation: scale oscillates between 1.0 and 1.05, duration 2s, infinite, ease-in-out
+2. **Rotating messages** (below logo, 32px height container, centered):
+   - Messages cycle every **1200ms**: "Digging up the scrolls...", "Preparing the tea...", "Lighting the candles...", "Setting the mood..."
+   - Each message fades in (opacity 0→1, y: 10→0) and fades out (opacity 0, y: -10), duration 300ms
+   - Serif font, 18px, `warm-black/60`
+3. **Total duration:** `MESSAGES.length * 1200ms` = **4800ms**, then calls `onReady` callback
+4. **Exit:** The entire screen fades out (opacity 1→0)
+
+---
+
+## 11. Session Summary Screen
+
+Full-screen overlay shown after the practice session ends.
+
+**Container:** `fixed inset-0 z-50`, `warm-offwhite` background, `overflow-y: auto`
+
+**Content** (max-width 56rem / 896px, centered, `py-16 px-6`):
+
+1. **Header** (centered, margin-bottom 40px):
+   - "Session Complete!" — serif font, 30px, font-weight medium, `warm-black`
+   - "{N} practiced, 0 skipped" — `warm-black/50`, margin-top 8px
+
+2. **AI Summary Blurb** (margin-bottom 40px):
+   - Background: `sage-tint` (`#EDF2EE`)
+   - Border: `sage` at 15% opacity
+   - Border radius: 16px
+   - Padding: 32px
+   - Text: Italic, 16px, `warm-black/70`, `line-height: relaxed`
+
+3. **Results Table** (margin-bottom 48px):
+   - Container: `white` background, `warm-gray` border, `rounded-2xl`, `shadow-sm`, overflow hidden
+   - **Header row:** `warm-offwhite/50` background, bottom border
+     - Columns: Word, Grammar, Usage, Naturalness, Status
+     - Text: 11px, uppercase, bold, letter-spacing wider, `warm-black/40`
+     - Padding: `py-4 px-6`
+   - **Data rows:** Bottom border `warm-gray/30`, last row no border
+     - Word column: Character (serif, 18px, `warm-black`) + pinyin (12px, `warm-black/40`) in a baseline-aligned row
+     - Score columns: 14px, tabular-nums, `warm-black/70`
+     - Status column: Rounded-full pill
+       - Correct: `sage-tint` background, `sage` text, check icon (12px)
+       - Needs work: `coral/10` background, `coral` text, X icon (12px)
+     - Row animation: Staggered entrance, each row delays 50ms after the previous (starting at 100ms)
+
+4. **Action Buttons** (centered, gap 16px):
+   - "Start New Session": `sage` background, `white` text, `px-8 py-3.5`, `rounded-xl`, `shadow-sm`
+   - "Back to Home": `white` background, `warm-gray` border, `warm-black` text, same sizing
+
+---
+
+## 12. State Machine Summary
+
+```
+ViewState (App level):
+  welcome → lobby → loading → practicing → summary → lobby
+
+Status (within PracticeChat):
+  ai_typing → waiting_for_user → [user submits] → ai_typing → feedback_given
+  → [click Next Word] → rating_typing → awaiting_rating → [click rating]
+  → rating_selected → transitioning → [next word loads] → ai_typing → ...
+  
+  On last word after rating:
+  → rating_selected → ai_typing → session_complete
+```
+
+---
+
+## 13. Color Tokens Reference
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `sage` | `#6B8F71` | Primary accent, buttons, progress, user bubbles |
+| `sage-tint` | `#EDF2EE` | Light green backgrounds, success pills |
+| `coral` | `#E07A5F` | Error/warning accent, "needs work" pills |
+| `warm-offwhite` | `#FAFAF8` | Page backgrounds, input backgrounds |
+| `warm-black` | `#3A3A38` | Primary text |
+| `warm-gray` | `#E8E5E0` | Borders, dividers, subtle backgrounds |
+| `charcoal` | `#2A2A28` | Sidebar background |
+| `ai-bubble` | `#F0EDE8` | AI message bubble background (legacy, now using white) |
+| Chat bg | `#F5F3EE` | Chat area background tint |
+
+---
+
+## 14. Typography
+
+- **Serif font** (headings, Chinese characters, decorative): Used for word pill characters, message characters, session summary title
+- **Sans font** (body, UI): Used for all body text, labels, buttons, timestamps
+- Chinese characters in the word pill use serif at display sizes (48px expanded, 20px collapsed, 72px in legacy card view)
+
+---
+
+## 15. Data Types
+
+```typescript
+interface Word {
+  id: string
+  character: string    // Chinese character(s)
+  pinyin: string       // Romanized pronunciation
+  meaning: string      // English definition
+}
+
+interface Deck {
+  id: string
+  name: string
+  totalWords: number
+  masteredWords: number
+  practicedWords: number
+  lastPracticed: string
+  lastPracticedHoursAgo: number
+  lastAiMessage: string
+  practiceWords: Word[]
+  icon: string
+}
+
+interface Message {
+  id: string
+  sender: 'ai' | 'user'
+  text: string
+  timestamp: Date
+}
+
+interface SessionResult {
+  word: Word
+  userSentence: string
+  score: 'green' | 'yellow' | 'red'
+}
+```

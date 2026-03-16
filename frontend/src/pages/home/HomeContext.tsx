@@ -1,77 +1,119 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import type { WordContext, PracticeSummaryResponse } from '../../types/api'
+
+export type ViewState = 'home' | 'loading' | 'practicing' | 'summary'
+
+interface ActiveSessionData {
+  sessionId: number
+  deckId: number
+  deckName: string
+  greeting?: string
+  currentWord?: WordContext
+}
 
 interface HomeContextValue {
   selectedDeckId: number | null
-  activePracticeSessionId: number | null
-  showEndSessionModal: boolean
-  pendingDeckId: number | null
+  viewState: ViewState
+  activeSessionData: ActiveSessionData | null
+  summaryData: PracticeSummaryResponse | null
   selectDeck: (deckId: number) => void
-  startPractice: (deckId: number, sessionId: number) => void
+  startPractice: (data: ActiveSessionData) => void
+  onLoadingComplete: () => void
   endPractice: () => void
-  confirmEndSession: () => void
-  cancelEndSession: () => void
-  requestDeckSwitch: (deckId: number) => void
+  showSummary: (summary: PracticeSummaryResponse) => void
+  backToHome: () => void
+}
+
+const STORAGE_KEY = 'laoshi_active_session'
+
+function saveSession(data: ActiveSessionData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    sessionId: data.sessionId,
+    deckId: data.deckId,
+    deckName: data.deckName,
+  }))
+}
+
+function loadSession(): ActiveSessionData | null {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (!saved) return null
+    return JSON.parse(saved)
+  } catch {
+    localStorage.removeItem(STORAGE_KEY)
+    return null
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(STORAGE_KEY)
 }
 
 const HomeContext = createContext<HomeContextValue | undefined>(undefined)
 
 export function HomeProvider({ children }: { children: React.ReactNode }) {
   const [selectedDeckId, setSelectedDeckId] = useState<number | null>(null)
-  const [activePracticeSessionId, setActivePracticeSessionId] = useState<number | null>(null)
-  const [showEndSessionModal, setShowEndSessionModal] = useState(false)
-  const [pendingDeckId, setPendingDeckId] = useState<number | null>(null)
+  const [viewState, setViewState] = useState<ViewState>('home')
+  const [activeSessionData, setActiveSessionData] = useState<ActiveSessionData | null>(null)
+  const [summaryData, setSummaryData] = useState<PracticeSummaryResponse | null>(null)
+
+  // Restore active session from localStorage on mount
+  useEffect(() => {
+    const saved = loadSession()
+    if (saved) {
+      setActiveSessionData(saved)
+      setSelectedDeckId(saved.deckId)
+      setViewState('practicing')
+    }
+  }, [])
 
   const selectDeck = useCallback((deckId: number) => {
     setSelectedDeckId(deckId)
   }, [])
 
-  const startPractice = useCallback((deckId: number, sessionId: number) => {
-    setSelectedDeckId(deckId)
-    setActivePracticeSessionId(sessionId)
+  const startPractice = useCallback((data: ActiveSessionData) => {
+    setActiveSessionData(data)
+    setSelectedDeckId(data.deckId)
+    saveSession(data)
+    setViewState('loading')
+  }, [])
+
+  const onLoadingComplete = useCallback(() => {
+    setViewState('practicing')
   }, [])
 
   const endPractice = useCallback(() => {
-    setActivePracticeSessionId(null)
-    setShowEndSessionModal(false)
-    setPendingDeckId(null)
+    setActiveSessionData(null)
+    setSummaryData(null)
+    clearSession()
+    setViewState('home')
   }, [])
 
-  const confirmEndSession = useCallback(() => {
-    setActivePracticeSessionId(null)
-    setShowEndSessionModal(false)
-    if (pendingDeckId !== null) {
-      setSelectedDeckId(pendingDeckId)
-      setPendingDeckId(null)
-    }
-  }, [pendingDeckId])
-
-  const cancelEndSession = useCallback(() => {
-    setShowEndSessionModal(false)
-    setPendingDeckId(null)
+  const showSummary = useCallback((summary: PracticeSummaryResponse) => {
+    setSummaryData(summary)
+    clearSession()
+    setViewState('summary')
   }, [])
 
-  const requestDeckSwitch = useCallback((deckId: number) => {
-    if (activePracticeSessionId !== null) {
-      setPendingDeckId(deckId)
-      setShowEndSessionModal(true)
-    } else {
-      setSelectedDeckId(deckId)
-    }
-  }, [activePracticeSessionId])
+  const backToHome = useCallback(() => {
+    setActiveSessionData(null)
+    setSummaryData(null)
+    setViewState('home')
+  }, [])
 
   return (
     <HomeContext.Provider
       value={{
         selectedDeckId,
-        activePracticeSessionId,
-        showEndSessionModal,
-        pendingDeckId,
+        viewState,
+        activeSessionData,
+        summaryData,
         selectDeck,
         startPractice,
+        onLoadingComplete,
         endPractice,
-        confirmEndSession,
-        cancelEndSession,
-        requestDeckSwitch,
+        showSummary,
+        backToHome,
       }}
     >
       {children}

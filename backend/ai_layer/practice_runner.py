@@ -554,15 +554,28 @@ def advance_word(session_id: int, user_id: int, quality: int | None = None):
         avg_naturalness = mean([a.naturalness_score for a in attempts if a.naturalness_score is not None])
 
         # Write averages to SessionWord
-        current_sw.avg_grammar_score = avg_grammar
-        current_sw.avg_usage_score = avg_usage
-        current_sw.avg_naturalness_score = avg_naturalness
+        current_sw.grammar_score = avg_grammar
+        current_sw.usage_score = avg_usage
+        current_sw.naturalness_score = avg_naturalness
         current_sw.is_correct = (avg_grammar == 10 and avg_usage >= 8)
         current_sw.status = 1  # completed
         current_sw.update()
 
         # Update Word SRS state if quality rating provided
         word = Word.get_by_id(current_sw.word_id)
+
+        # Save SRS snapshot before rating (for undo+redo on retroactive edits)
+        if quality is not None:
+            current_sw.srs_snapshot = {
+                'repetitions': word.repetitions,
+                'interval_days': word.interval_days,
+                'ease_factor': float(word.ease_factor),
+                'next_review_date': str(word.next_review_date) if word.next_review_date else None,
+                'is_mastered': word.is_mastered,
+                'last_quality': word.last_quality,
+            }
+            current_sw.update()
+
         if quality is not None:
             word.last_quality = quality
             update_srs(word, quality)

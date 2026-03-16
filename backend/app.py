@@ -10,8 +10,8 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 # Import from other files
 from extensions import db, jwt, limiter
-from resources import WordListResource, WordResource, WordMarkAsMasteredResource, UserListResource, UserResource, SessionListResource, SessionResource, SessionWordListResource, SessionWordResource, HomeResource, TokenResource, TokenRefreshResource, TokenRevokeResource, MeResource
-from practice_resources import PracticeSessionResource, PracticeMessageResource, PracticeNextWordResource, PracticeSummaryResource, PracticeEndSessionResource
+from resources import WordListResource, WordResource, WordMarkAsMasteredResource, RerateWordResource, UserListResource, UserResource, HomeResource, TokenResource, TokenRefreshResource, TokenRevokeResource, MeResource
+from practice_resources import PracticeSessionResource, PracticeSessionDetailResource, PracticeMessageResource, PracticeNextWordResource, PracticeSummaryResource, PracticeEndSessionResource
 from progress_resources import ProgressStatsResource
 from settings_resources import UserSettingsResource, UserSettingsKeyResource, UserSettingsKeyValidateResource
 from report_card_resources import ReportCardResource, GenerateFeedbackResource, StreakResource
@@ -50,12 +50,9 @@ def register_resources(app):
     api.add_resource(WordListResource, '/words')
     api.add_resource(WordResource, '/words/<int:id>')
     api.add_resource(WordMarkAsMasteredResource, '/words/<int:word_id>/mark-as-mastered')
+    api.add_resource(RerateWordResource, '/words/<int:id>/rerate')
     api.add_resource(UserListResource, '/users')
     api.add_resource(UserResource, '/users/<int:id>')
-    api.add_resource(SessionListResource, '/sessions')
-    api.add_resource(SessionResource, '/sessions/<int:id>')
-    api.add_resource(SessionWordListResource, '/sessions/<int:session_id>/words')
-    api.add_resource(SessionWordResource, '/sessions/<int:session_id>/words/<int:word_id>')   
     api.add_resource(HomeResource, '/')
     api.add_resource(TokenResource, '/token')
     api.add_resource(TokenRefreshResource, '/token/refresh')
@@ -64,6 +61,7 @@ def register_resources(app):
     
     # Practice session endpoints
     api.add_resource(PracticeSessionResource, '/practice/sessions')
+    api.add_resource(PracticeSessionDetailResource, '/practice/sessions/<int:id>')
     api.add_resource(PracticeMessageResource, '/practice/sessions/<int:id>/messages')
     api.add_resource(PracticeNextWordResource, '/practice/sessions/<int:id>/next-word')
     api.add_resource(PracticeEndSessionResource, '/practice/sessions/<int:id>/end')

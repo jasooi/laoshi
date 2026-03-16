@@ -106,7 +106,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
         word: row[fieldMap['word']],
         pinyin: row[fieldMap['pinyin']],
         meaning: row[fieldMap['meaning']],
-        source_name: sourceName.trim(),
+        notes: sourceName.trim(),
       }))
 
       const validRows = allRows.filter(w => w.word && w.pinyin && w.meaning)
@@ -168,10 +168,10 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
               isDragging
-                ? 'border-purple-500 bg-purple-50'
+                ? 'border-sage bg-sage-tint'
                 : selectedFile
-                ? 'border-purple-500 bg-purple-50'
-                : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+                ? 'border-sage bg-sage-tint'
+                : 'border-gray-300 hover:border-sage hover:bg-gray-50'
             }`}
           >
             <input
@@ -183,25 +183,25 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
             />
             {selectedFile ? (
               <>
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-sage-tint flex items-center justify-center">
+                  <svg className="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
-                <p className="text-purple-600 font-medium">{selectedFile.name}</p>
+                <p className="text-sage font-medium">{selectedFile.name}</p>
                 <p className="text-sm text-gray-500 mt-1">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </>
             ) : (
               <>
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-purple-100 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-sage-tint flex items-center justify-center">
+                  <svg className="w-6 h-6 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                   </svg>
                 </div>
                 <p>
-                  <span className="text-purple-600 font-medium">Click to Upload</span>
+                  <span className="text-sage font-medium">Click to Upload</span>
                   <span className="text-gray-600"> or drag and drop</span>
                 </p>
                 <p className="text-sm text-gray-400 mt-1">Maximum file size 10 MB</p>
@@ -223,7 +223,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
             placeholder="e.g., Kitchen Vocabulary"
             value={sourceName}
             onChange={(e) => setSourceName(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
           />
         </div>
 
@@ -247,7 +247,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
           <button
             onClick={handleUpload}
             disabled={!selectedFile || !sourceName.trim() || uploading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/80 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
           >
             {uploading && (
               <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

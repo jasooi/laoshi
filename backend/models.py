@@ -82,7 +82,7 @@ class Word(db.Model):
     word = db.Column(db.String(150), nullable=False)
     pinyin = db.Column(db.String(150), nullable=False)
     meaning = db.Column(db.String(300), nullable=False)
-    source_name = db.Column(db.String(200), nullable=True, default=None)
+    notes = db.Column(db.String(200), nullable=True, default=None)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
     # Deck relationship
@@ -125,7 +125,7 @@ class Word(db.Model):
             'word': self.word,
             'pinyin': self.pinyin,
             'meaning': self.meaning,
-            'source_name': self.source_name,
+            'notes': self.notes,
             'deck_id': self.deck_id,
             # SRS fields
             'repetitions': self.repetitions,
@@ -591,6 +591,7 @@ class SessionWord(db.Model):
     naturalness_score = db.Column(db.Float, nullable=True)
     is_correct = db.Column(db.Boolean, nullable=True)
     status = db.Column(db.Integer, nullable=False, default=0)  # 0=pending, 1=completed, -1=skipped
+    srs_snapshot = db.Column(db.JSON, nullable=True)  # Pre-rating SRS state for undo+redo
 
     __table_args__ = (
         db.PrimaryKeyConstraint('word_id', 'session_id'),
@@ -625,6 +626,7 @@ class SessionWord(db.Model):
             'naturalness_score': self.naturalness_score,
             'is_correct': self.is_correct,
             'session_notes': self.session_notes,
+            'srs_snapshot': self.srs_snapshot,
         }
 
     def is_owner(self, viewer) -> bool:

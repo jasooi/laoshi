@@ -41,8 +41,8 @@ describe('Pagination', () => {
       // Act
       const activeButton = screen.getByRole('button', { name: '1' })
 
-      // Assert — active page carries the purple background class
-      expect(activeButton).toHaveClass('bg-purple-600')
+      // Assert — active page carries the sage background class
+      expect(activeButton).toHaveClass('bg-sage')
     })
   })
 

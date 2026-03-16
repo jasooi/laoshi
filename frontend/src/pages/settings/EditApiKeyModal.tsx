@@ -138,7 +138,7 @@ export default function EditApiKeyModal({
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Enter your API key"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <p className="mt-1 text-xs text-gray-500">
               Leave empty to clear the current key
@@ -158,7 +158,7 @@ export default function EditApiKeyModal({
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-sage text-white rounded-lg hover:bg-sage/80 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

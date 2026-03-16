@@ -1,109 +1,152 @@
 import { useEffect, useState, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
 import { practiceApi } from '../../lib/api'
-import type { PracticeSession, PracticeResponse, PracticeSummaryResponse } from '../../types/api'
+import type { PracticeSession, FeedbackData, WordContext } from '../../types/api'
 import { useHome } from './HomeContext'
-import { Send, X, CheckCircle, Check, X as XIcon } from 'lucide-react'
+import { FeedbackCard } from '../../components/FeedbackCard'
+import FloatingWordPill from './FloatingWordPill'
+import ConfidenceRating from './ConfidenceRating'
+import { Send, ChevronsRight, ChevronLeft, AlertTriangle } from 'lucide-react'
+import { motion } from 'framer-motion'
+import laoshiLogo from '../../assets/laoshi-logo.png'
 
-// Quality rating modal
-function QualityRatingModal({
-  isOpen,
-  onRate,
-  onClose,
-}: {
-  isOpen: boolean
-  onRate: (quality: number) => void
-  onClose: () => void
-}) {
-  if (!isOpen) return null
+type PracticeStatus =
+  | 'ai_typing'
+  | 'waiting_for_user'
+  | 'feedback_given'
+  | 'rating_typing'
+  | 'awaiting_rating'
+  | 'rating_selected'
+  | 'transitioning'
+  | 'session_complete'
 
-  const ratings = [
-    { value: 0, label: 'Blackout', emoji: '😵', desc: 'Complete blackout' },
-    { value: 1, label: 'Wrong', emoji: '😞', desc: 'Incorrect response' },
-    { value: 2, label: 'Hard', emoji: '😕', desc: 'Correct but difficult' },
-    { value: 3, label: 'OK', emoji: '😐', desc: 'Correct with hesitation' },
-    { value: 4, label: 'Good', emoji: '🙂', desc: 'Correct response' },
-    { value: 5, label: 'Easy', emoji: '🤩', desc: 'Perfect response' },
-  ]
+interface ChatMessage {
+  id: string
+  role: 'laoshi' | 'user'
+  content: string
+  feedback?: FeedbackData | null
+  ratingData?: {
+    wordId: number
+    wordText: string
+    quality?: number
+  }
+}
+
+// Chat message bubble
+function ChatBubble({ message }: { message: ChatMessage }) {
+  if (message.role === 'user') {
+    return (
+      <div className="flex justify-end mb-4">
+        <div className="max-w-[75%]">
+          <div className="bg-sage rounded-2xl rounded-tr-sm px-4 py-3">
+            <p className="text-[15px] text-white leading-relaxed whitespace-pre-wrap">
+              {message.content}
+            </p>
+          </div>
+          <p className="text-[10px] text-warm-black/30 mt-1 text-right">
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-stone-800">How did you do?</h3>
-          <button
-            onClick={onClose}
-            className="text-stone-400 hover:text-stone-600"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <div className="flex gap-3 mb-4">
+      <img
+        src={laoshiLogo}
+        alt="Laoshi"
+        className="w-7 h-7 rounded-full flex-shrink-0 self-end mb-5"
+      />
+      <div className="max-w-[75%]">
+        <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-warm-gray/40 shadow-sm">
+          <p className="text-[15px] text-warm-black leading-relaxed whitespace-pre-wrap">
+            {message.content}
+          </p>
         </div>
-        <p className="text-stone-500 text-sm mb-4">
-          Rate your recall quality to optimize your review schedule
+        {message.feedback && (
+          <div className="mt-2">
+            <FeedbackCard feedback={message.feedback} />
+          </div>
+        )}
+        <p className="text-[10px] text-warm-black/30 mt-1">
+          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
-        <div className="space-y-2">
-          {ratings.map((rating) => (
-            <button
-              key={rating.value}
-              onClick={() => onRate(rating.value)}
-              className="w-full flex items-center gap-3 p-3 rounded-lg border border-stone-200 hover:border-primary-500 hover:bg-primary-50 transition-colors text-left"
-            >
-              <span className="text-2xl">{rating.emoji}</span>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-stone-800">{rating.label}</span>
-                  <span className="text-xs text-stone-400">({rating.value})</span>
-                </div>
-                <p className="text-xs text-stone-500">{rating.desc}</p>
-              </div>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   )
 }
 
 export default function PracticePanel() {
-  const { deckId, sessionId } = useParams<{ deckId: string; sessionId: string }>()
+  const { activeSessionData, endPractice, showSummary: showSummaryFn } = useHome()
+
   const [session, setSession] = useState<PracticeSession | null>(null)
-  const [currentWord, setCurrentWord] = useState<PracticeResponse | null>(null)
-  const [userSentence, setUserSentence] = useState('')
-  const [feedback, setFeedback] = useState<PracticeResponse | null>(null)
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [currentWord, setCurrentWord] = useState<WordContext | null>(null)
+  const [deckName, setDeckName] = useState(activeSessionData?.deckName || '')
+  const [userInput, setUserInput] = useState('')
   const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [showQualityModal, setShowQualityModal] = useState(false)
-  const [showSummary, setShowSummary] = useState(false)
-  const [summary, setSummary] = useState<PracticeSummaryResponse | null>(null)
+  const [status, setStatus] = useState<PracticeStatus>('ai_typing')
   const [sessionStats, setSessionStats] = useState({ words_practiced: 0, words_total: 0 })
-  const { endPractice } = useHome()
-  const navigate = useNavigate()
+  const [showEndModal, setShowEndModal] = useState(false)
+  const [showDivider, setShowDivider] = useState(false)
+
+  const chatEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const initializedRef = useRef(false)
 
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
-    if (sessionId) {
-      loadSession(parseInt(sessionId))
-    }
-  }, [sessionId])
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, status, showDivider])
 
+  // Focus input when ready for input
   useEffect(() => {
-    if (inputRef.current && !feedback) {
+    if ((status === 'waiting_for_user' || status === 'feedback_given') && inputRef.current) {
       inputRef.current.focus()
     }
-  }, [feedback, currentWord])
+  }, [status, currentWord])
+
+  // Load session on mount
+  useEffect(() => {
+    if (activeSessionData?.sessionId && !initializedRef.current) {
+      initializedRef.current = true
+      loadSession(activeSessionData.sessionId)
+    }
+  }, [activeSessionData])
 
   const loadSession = async (id: number) => {
     try {
       const response = await practiceApi.getSession(id)
-      setSession(response.data.session)
+      const sessionData = response.data.session
+      setSession(sessionData)
       setSessionStats({
-        words_practiced: response.data.session.words_practiced || 0,
-        words_total: response.data.session.words_total || 0,
+        words_practiced: sessionData.words_practiced || 0,
+        words_total: sessionData.words_total || 0,
       })
 
-      // Get first word
-      const wordResponse = await practiceApi.nextWord(id)
-      setCurrentWord(wordResponse.data)
+      if (!deckName && response.data.deck_name) {
+        setDeckName(response.data.deck_name)
+      }
+
+      // Use context data if available (fresh session start)
+      if (activeSessionData?.greeting && activeSessionData?.currentWord) {
+        setCurrentWord(activeSessionData.currentWord)
+        setMessages([{
+          id: 'greeting',
+          role: 'laoshi',
+          content: activeSessionData.greeting,
+        }])
+      } else if (response.data.current_word) {
+        // Page refresh fallback
+        const word = response.data.current_word
+        setCurrentWord(word)
+        setMessages([{
+          id: 'greeting',
+          role: 'laoshi',
+          content: `Let's practice with ${word.word} (${word.pinyin})! This word means "${word.meaning}". Try making a sentence using it.`,
+        }])
+      }
+      setStatus('waiting_for_user')
     } catch (error) {
       console.error('Failed to load session:', error)
     } finally {
@@ -111,249 +154,380 @@ export default function PracticePanel() {
     }
   }
 
-  const handleSubmit = async () => {
-    if (!session || !userSentence.trim()) return
+  const addMessage = (role: 'laoshi' | 'user', content: string, feedback?: FeedbackData | null) => {
+    setMessages(prev => [...prev, {
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      role,
+      content,
+      feedback,
+    }])
+  }
 
-    setSubmitting(true)
+  const handleSubmit = async () => {
+    if (!session || !userInput.trim() || (status !== 'waiting_for_user' && status !== 'feedback_given')) return
+
+    const sentence = userInput.trim()
+    setUserInput('')
+    addMessage('user', sentence)
+    setStatus('ai_typing')
+
     try {
-      const response = await practiceApi.submitSentence(session.id, userSentence)
-      setFeedback(response.data)
+      const response = await practiceApi.sendMessage(session.id, sentence)
+      const data = response.data
+
+      addMessage('laoshi', data.laoshi_response, data.feedback)
       setSessionStats({
-        words_practiced: response.data.words_practiced || 0,
-        words_total: response.data.words_total || 0,
+        words_practiced: data.words_practiced,
+        words_total: data.words_total,
       })
+
+      if (data.session_complete) {
+        const summaryResponse = await practiceApi.getSummary(session.id)
+        showSummaryFn(summaryResponse.data)
+      } else {
+        setStatus('feedback_given')
+      }
     } catch (error) {
       console.error('Failed to submit:', error)
-      alert('Failed to submit sentence. Please try again.')
-    } finally {
-      setSubmitting(false)
+      addMessage('laoshi', 'Sorry, something went wrong. Please try again.')
+      setStatus('waiting_for_user')
     }
   }
 
   const handleNextWord = () => {
-    setShowQualityModal(true)
+    setStatus('rating_typing')
+    setTimeout(() => {
+      // Add rating prompt as a message
+      const ratingMsgId = `rating-${Date.now()}`
+      setMessages(prev => [...prev, {
+        id: ratingMsgId,
+        role: 'laoshi',
+        content: '',
+        ratingData: {
+          wordId: currentWord!.word_id,
+          wordText: currentWord!.word,
+          quality: undefined,
+        },
+      }])
+      setStatus('awaiting_rating')
+    }, 800)
   }
 
-  const handleQualityRate = async (quality: number) => {
-    setShowQualityModal(false)
+  const handleRate = async (messageId: string, wordId: number, quality: number, isEdit: boolean) => {
+    // Update the rating in the message
+    setMessages(prev => prev.map(m =>
+      m.id === messageId
+        ? { ...m, ratingData: { ...m.ratingData!, quality } }
+        : m
+    ))
 
-    if (!session) return
-
-    try {
-      const response = await practiceApi.nextWord(session.id, quality)
-
-      if (response.data.is_session_complete) {
-        // Session complete - fetch summary
-        const summaryResponse = await practiceApi.getSummary(session.id)
-        setSummary(summaryResponse.data)
-        setShowSummary(true)
-      } else {
-        // Next word
-        setCurrentWord(response.data)
-        setFeedback(null)
-        setUserSentence('')
-        setSessionStats({
-          words_practiced: response.data.words_practiced || 0,
-          words_total: response.data.words_total || 0,
-        })
+    if (isEdit) {
+      // Retroactive edit: call rerate API
+      try {
+        await practiceApi.rerateWord(wordId, session!.id, quality)
+      } catch (error) {
+        console.error('Failed to rerate word:', error)
       }
-    } catch (error) {
-      console.error('Failed to get next word:', error)
+    } else {
+      // First-time rating: advance to next word
+      setStatus('rating_selected')
+      if (!session) return
+
+      try {
+        const response = await practiceApi.nextWord(session.id, quality)
+        const data = response.data
+
+        setSessionStats({
+          words_practiced: data.words_practiced,
+          words_total: data.words_total,
+        })
+
+        if (data.session_complete) {
+          if (data.summary) {
+            showSummaryFn(data.summary)
+          } else {
+            const summaryResponse = await practiceApi.getSummary(session.id)
+            showSummaryFn(summaryResponse.data)
+          }
+        } else {
+          setTimeout(() => {
+            setShowDivider(true)
+            setStatus('transitioning')
+            setTimeout(() => {
+              setShowDivider(false)
+              if (data.current_word) setCurrentWord(data.current_word)
+              if (data.laoshi_response) addMessage('laoshi', data.laoshi_response)
+              setStatus('waiting_for_user')
+              setUserInput('')
+            }, 600)
+          }, 500)
+        }
+      } catch (error) {
+        console.error('Failed to get next word:', error)
+        setStatus('feedback_given')
+      }
     }
   }
 
   const handleEndSession = async () => {
     if (!session) return
-
     try {
       await practiceApi.endSession(session.id)
     } catch (error) {
       console.error('Failed to end session:', error)
     } finally {
       endPractice()
-      navigate(`/home/deck/${deckId}`)
     }
   }
 
-  const handleSummaryClose = () => {
-    endPractice()
-    navigate(`/home/deck/${deckId}`)
-  }
-
+  // Loading state
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-pulse text-stone-400">Loading practice...</div>
+      <div className="h-full flex items-center justify-center bg-chat-bg">
+        <div className="animate-pulse text-warm-muted">Loading practice session...</div>
       </div>
     )
   }
 
-  if (!currentWord && !showSummary) {
+  // No word available
+  if (!currentWord) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="h-full flex items-center justify-center bg-chat-bg">
         <div className="text-center">
-          <p className="text-stone-500 mb-4">No words available for practice</p>
+          <p className="text-warm-muted mb-4">No words available for practice</p>
           <button
-            onClick={() => navigate(`/home/deck/${deckId}`)}
-            className="text-primary-600 hover:text-primary-700"
+            onClick={() => endPractice()}
+            className="text-sage hover:text-sage/80"
           >
-            Back to Deck
+            Back to Home
           </button>
         </div>
       </div>
     )
   }
+
+  const progressPercent = sessionStats.words_total > 0
+    ? (sessionStats.words_practiced / sessionStats.words_total) * 100
+    : 0
+
+  const isInputLocked = ['rating_typing', 'awaiting_rating', 'rating_selected', 'transitioning', 'session_complete'].includes(status)
+  const isSessionComplete = status === 'session_complete'
+
+  // Find the last rating message ID for isLatest check
+  const ratingMessages = messages.filter(m => m.ratingData)
+  const lastRatingMsgId = ratingMessages.length > 0 ? ratingMessages[ratingMessages.length - 1].id : undefined
 
   return (
-    <div className="flex-1 flex flex-col bg-stone-50">
-      {/* Header with progress */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-lg font-semibold text-stone-800">Practice Session</h2>
-          <button
-            onClick={handleEndSession}
-            className="text-stone-500 hover:text-stone-700 text-sm"
-          >
-            End Session
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary-500 transition-all"
-                style={{
-                  width: `${
-                    sessionStats.words_total > 0
-                      ? (sessionStats.words_practiced / sessionStats.words_total) * 100
-                      : 0
-                  }%`,
-                }}
-              />
+    <div className="h-full flex flex-col bg-chat-bg">
+      {/* Progress bar */}
+      <div className="h-[3px] bg-warm-gray/30 flex-shrink-0">
+        <div
+          className="h-full bg-sage transition-all duration-500 ease-out"
+          style={{ width: `${progressPercent}%` }}
+        />
+      </div>
+
+      {/* Chat header */}
+      <div className="h-14 bg-white/90 backdrop-blur-sm border-b border-warm-gray/50 flex items-center flex-shrink-0">
+        <div className="max-w-3xl w-full mx-auto px-6 flex items-center justify-between">
+          {/* Left side */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowEndModal(true)}
+              className="text-warm-black/50 hover:text-warm-black transition-colors"
+            >
+              <ChevronLeft className="w-[18px] h-[18px]" />
+            </button>
+            <div className="w-8 h-8 rounded-full bg-warm-offwhite border border-warm-gray/50 flex items-center justify-center">
+              <img src={laoshiLogo} alt="Laoshi" className="w-6 h-6 object-contain" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-warm-black leading-tight">Laoshi</p>
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                <span className="text-[10px] text-green-600 font-medium">Online</span>
+              </div>
             </div>
           </div>
-          <span className="text-sm text-stone-500 whitespace-nowrap">
-            {sessionStats.words_practiced}/{sessionStats.words_total} words
-          </span>
+
+          {/* Right side */}
+          <div className="text-right">
+            <p className="text-[11px] text-warm-black/50 font-medium">{deckName}</p>
+            <p className="text-[10px] text-warm-black/30">
+              {sessionStats.words_practiced} / {sessionStats.words_total}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Practice content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {showSummary && summary ? (
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold text-stone-800 mb-2">Session Complete!</h2>
-              <p className="text-stone-600">
-                {summary.words_practiced} words practiced, {summary.words_skipped} skipped
-              </p>
-            </div>
-            <div className="bg-primary-50 rounded-xl p-6 border border-primary-100 mb-6">
-              <p className="text-primary-900 leading-relaxed text-lg">{summary.summary_text}</p>
-            </div>
-            <div className="flex justify-center">
-              <button
-                onClick={handleSummaryClose}
-                className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
-              >
-                Back to Deck
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-2xl mx-auto space-y-6">
-            {/* Target word */}
-            <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6 text-center">
-              <p className="text-sm text-stone-500 mb-2">Target Word</p>
-              <h2 className="text-4xl font-bold text-stone-800 mb-2">
-                {currentWord?.target_word}
-              </h2>
-              <p className="text-lg text-stone-600">
-                {currentWord?.target_pinyin}
-              </p>
-              <p className="text-stone-500 mt-2">{currentWord?.target_english}</p>
-            </div>
+      {/* Chat area (scrollable) */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-6">
+          {/* Floating word pill */}
+          {currentWord && <FloatingWordPill word={currentWord} />}
 
-            {/* Input area */}
-            {!feedback ? (
-              <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6">
-                <label className="block text-sm font-medium text-stone-700 mb-2">
-                  Create a sentence using this word:
-                </label>
-                <textarea
-                  ref={inputRef}
-                  value={userSentence}
-                  onChange={(e) => setUserSentence(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit()
-                    }
-                  }}
-                  placeholder="Type your sentence in Chinese..."
-                  className="w-full px-4 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                  rows={3}
-                  disabled={submitting}
-                />
-                <div className="mt-4 flex justify-end">
+          {/* Messages */}
+          {messages.map((msg) => (
+            msg.ratingData ? (
+              <ConfidenceRating
+                key={msg.id}
+                messageId={msg.id}
+                wordId={msg.ratingData.wordId}
+                wordText={msg.ratingData.wordText}
+                quality={msg.ratingData.quality}
+                isLatest={msg.id === lastRatingMsgId && status !== 'waiting_for_user'}
+                onRate={handleRate}
+              />
+            ) : (
+              <ChatBubble key={msg.id} message={msg} />
+            )
+          ))}
+
+          {/* Typing indicator */}
+          {(status === 'ai_typing' || status === 'rating_typing') && (
+            <div className="flex gap-3 mb-4">
+              <img
+                src={laoshiLogo}
+                alt="Laoshi"
+                className="w-7 h-7 rounded-full flex-shrink-0 self-end mb-5"
+              />
+              <div className="max-w-[75%]">
+                <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-warm-gray/40 shadow-sm">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 bg-warm-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-2 h-2 bg-warm-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-2 h-2 bg-warm-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Word divider */}
+          {showDivider && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+              className="flex items-center gap-4 my-6"
+            >
+              <div className="flex-1 h-px bg-warm-gray/50" />
+              <span className="text-[11px] text-warm-black/25 font-medium tracking-wide uppercase">
+                next word
+              </span>
+              <div className="flex-1 h-px bg-warm-gray/50" />
+            </motion.div>
+          )}
+
+          <div ref={chatEndRef} />
+        </div>
+      </div>
+
+      {/* Input area */}
+      <div className="bg-white border-t border-warm-gray/50 px-6 py-4 flex-shrink-0">
+        <div className="max-w-3xl mx-auto">
+          {isSessionComplete ? (
+            <div className="flex justify-center">
+              <motion.button
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={() => {
+                  if (session) {
+                    practiceApi.getSummary(session.id).then(res => showSummaryFn(res.data))
+                  }
+                }}
+                className="flex items-center gap-2 bg-sage hover:bg-sage/90 text-white font-medium px-8 py-3.5 rounded-xl shadow-sm transition-colors"
+              >
+                View Session Summary
+              </motion.button>
+            </div>
+          ) : isInputLocked ? (
+            <div className="bg-warm-offwhite/60 border border-warm-gray/50 rounded-2xl py-5 flex items-center justify-center opacity-60">
+              <p className="text-sm text-warm-black/40">Rate your confidence to continue</p>
+            </div>
+          ) : (
+            <div className="border border-warm-gray rounded-2xl focus-within:border-sage focus-within:ring-1 focus-within:ring-sage overflow-hidden transition-colors">
+              <textarea
+                ref={inputRef}
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmit()
+                  }
+                }}
+                placeholder="Type your sentence here..."
+                className="w-full px-4 pt-4 pb-2 bg-warm-offwhite resize-none text-[15px] text-warm-black placeholder:text-warm-black/30 focus:outline-none min-h-[80px]"
+                disabled={status !== 'waiting_for_user' && status !== 'feedback_given'}
+                style={{ opacity: (status !== 'waiting_for_user' && status !== 'feedback_given') ? 0.5 : 1 }}
+              />
+              <div className="bg-white border-t border-warm-gray/50 px-4 py-2.5 flex items-center justify-between">
+                <button
+                  onClick={handleNextWord}
+                  disabled={status !== 'feedback_given'}
+                  className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                    status === 'feedback_given'
+                      ? 'text-warm-black/50 hover:text-warm-black'
+                      : 'text-warm-black/30 cursor-not-allowed'
+                  }`}
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                  Next Word
+                </button>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-warm-black/40">
+                    {userInput.length} characters
+                  </span>
                   <button
                     onClick={handleSubmit}
-                    disabled={!userSentence.trim() || submitting}
-                    className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-stone-300 disabled:cursor-not-allowed transition-colors"
+                    disabled={!userInput.trim() || (status !== 'waiting_for_user' && status !== 'feedback_given')}
+                    className="flex items-center gap-1.5 px-6 py-2 rounded-full text-sm font-medium transition-colors bg-warm-gray/50 text-warm-black/50 hover:bg-sage hover:text-white disabled:opacity-50 disabled:hover:bg-warm-gray/50 disabled:hover:text-warm-black/50"
                   >
-                    <Send className="w-4 h-4" />
-                    {submitting ? 'Checking...' : 'Submit'}
+                    Submit
+                    <Send className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
-            ) : (
-              <>
-                {/* Feedback */}
-                <div className="bg-white rounded-xl shadow-sm border border-stone-200 p-6 space-y-4">
-                  <div className="flex items-center gap-2">
-                    {feedback.is_correct ? (
-                      <>
-                        <Check className="w-6 h-6 text-green-600" />
-                        <span className="text-green-700 font-medium">Correct! Well done.</span>
-                      </>
-                    ) : (
-                      <>
-                        <XIcon className="w-6 h-6 text-amber-600" />
-                        <span className="text-amber-700 font-medium">Needs improvement</span>
-                      </>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-stone-600"><strong>Your sentence:</strong> {feedback.user_sentence}</p>
-                    {feedback.corrected_sentence && feedback.corrected_sentence !== feedback.user_sentence && (
-                      <p className="text-stone-600"><strong>Corrected:</strong> {feedback.corrected_sentence}</p>
-                    )}
-                    <p className="text-stone-600">{feedback.explanation}</p>
-                  </div>
-                </div>
-
-                {/* Next word button */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleNextWord}
-                    className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    Next Word
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Quality rating modal */}
-      <QualityRatingModal
-        isOpen={showQualityModal}
-        onRate={handleQualityRate}
-        onClose={() => setShowQualityModal(false)}
-      />
+      {/* End Session Modal */}
+      {showEndModal && (
+        <div className="fixed inset-0 z-[60] bg-warm-black/20 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8"
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-medium text-warm-black">End Current Session?</h3>
+            </div>
+            <p className="text-base text-warm-black/60 leading-relaxed mb-8">
+              You have an active practice session. Ending it will save your progress so far. Are you sure you want to continue?
+            </p>
+            <div className="flex gap-4 justify-end">
+              <button
+                onClick={() => setShowEndModal(false)}
+                className="px-6 py-2.5 text-warm-black/60 hover:text-warm-black font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowEndModal(false); handleEndSession() }}
+                className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-sm font-medium transition-colors"
+              >
+                End Session
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

@@ -73,11 +73,11 @@ export function FeedbackCard({ feedback }: FeedbackCardProps) {
 
       {/* Example sentences */}
       {feedback.exampleSentences && feedback.exampleSentences.length > 0 && (
-        <div className="bg-purple-50 rounded-lg p-3">
-          <h4 className="font-semibold text-purple-900 mb-2">Example sentences:</h4>
+        <div className="bg-sage-tint rounded-lg p-3">
+          <h4 className="font-semibold text-sage mb-2">Example sentences:</h4>
           <ul className="space-y-2">
             {feedback.exampleSentences.map((sentence, idx) => (
-              <li key={idx} className="text-purple-800 font-medium">
+              <li key={idx} className="text-sage font-medium">
                 {sentence}
               </li>
             ))}

@@ -105,7 +105,7 @@ const Register = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sage-tint via-pink-50 to-blue-100 p-4">
       <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full">
         <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
           Create your account
@@ -132,7 +132,7 @@ const Register = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Choose a username"
             />
           </div>
@@ -148,7 +148,7 @@ const Register = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Enter your email"
             />
           </div>
@@ -165,7 +165,7 @@ const Register = () => {
               onChange={(e) => setPassword(e.target.value)}
               onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
               autoComplete="new-password"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent ${
                 passwordError
                   ? 'border-red-500 bg-red-50'
                   : 'border-gray-300'
@@ -197,7 +197,7 @@ const Register = () => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               onBlur={() => setTouched(prev => ({ ...prev, confirmPassword: true }))}
               autoComplete="new-password"
-              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent ${
                 confirmPasswordError
                   ? 'border-red-500 bg-red-50'
                   : 'border-gray-300'
@@ -216,7 +216,7 @@ const Register = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-sage hover:bg-sage/80 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Creating account...' : 'Register'}
           </button>
@@ -224,7 +224,7 @@ const Register = () => {
 
         <p className="text-center mt-6 text-gray-600">
           Already have an account?{' '}
-          <Link to="/login" className="text-purple-600 hover:text-purple-700 font-medium">
+          <Link to="/login" className="text-sage hover:text-sage/80 font-medium">
             Log in
           </Link>
         </p>
