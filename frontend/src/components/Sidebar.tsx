@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import laoshiLogo from '../assets/laoshi-logo.png'
 
 interface SidebarProps {
   currentPath: string
@@ -63,15 +62,6 @@ const Sidebar = ({ currentPath }: SidebarProps) => {
 
   return (
     <aside className="w-20 bg-white border-r border-warm-gray flex flex-col items-center py-6">
-      {/* Logo/Brand */}
-      <div className="mb-4">
-        <img
-          src={laoshiLogo}
-          alt="Laoshi Logo"
-          className="w-16 h-16 rounded-2xl object-cover"
-        />
-      </div>
-
       {/* Navigation Items */}
       <div className="space-y-4">
         {sidebarItems.map((item) => {

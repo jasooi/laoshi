@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import axios from 'axios'
 import { practiceApi } from '../../lib/api'
 import type { PracticeSession, FeedbackData, WordContext } from '../../types/api'
 import { useHome } from './HomeContext'
@@ -8,6 +9,12 @@ import ConfidenceRating from './ConfidenceRating'
 import { Send, ChevronsRight, ChevronLeft, AlertTriangle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import laoshiLogo from '../../assets/laoshi-logo.png'
+
+const RATE_LIMIT_MESSAGE = "Laoshi needs a breather — the AI rate limit has been reached. You can add your own API key in Settings to avoid this."
+
+function isRateLimitError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 429
+}
 
 type PracticeStatus =
   | 'ai_typing'
@@ -24,6 +31,7 @@ interface ChatMessage {
   role: 'laoshi' | 'user'
   content: string
   feedback?: FeedbackData | null
+  isGrouped?: boolean
   ratingData?: {
     wordId: number
     wordText: string
@@ -51,12 +59,16 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className="flex gap-3 mb-4">
-      <img
-        src={laoshiLogo}
-        alt="Laoshi"
-        className="w-7 h-7 rounded-full flex-shrink-0 self-end mb-5"
-      />
+    <div className={`flex gap-3 ${message.isGrouped ? 'mb-1.5' : 'mb-4'}`}>
+      {message.isGrouped ? (
+        <div className="w-7 flex-shrink-0" />
+      ) : (
+        <img
+          src={laoshiLogo}
+          alt="Laoshi"
+          className="w-7 h-7 rounded-full flex-shrink-0 self-end mb-5"
+        />
+      )}
       <div className="max-w-[75%]">
         <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-warm-gray/40 shadow-sm">
           <p className="text-[15px] text-warm-black leading-relaxed whitespace-pre-wrap">
@@ -68,9 +80,11 @@ function ChatBubble({ message }: { message: ChatMessage }) {
             <FeedbackCard feedback={message.feedback} />
           </div>
         )}
-        <p className="text-[10px] text-warm-black/30 mt-1">
-          {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </p>
+        {!message.isGrouped && (
+          <p className="text-[10px] text-warm-black/30 mt-1">
+            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        )}
       </div>
     </div>
   )
@@ -128,28 +142,27 @@ export default function PracticePanel() {
         setDeckName(response.data.deck_name)
       }
 
+      let greetingContent = ''
       // Use context data if available (fresh session start)
       if (activeSessionData?.greeting && activeSessionData?.currentWord) {
         setCurrentWord(activeSessionData.currentWord)
-        setMessages([{
-          id: 'greeting',
-          role: 'laoshi',
-          content: activeSessionData.greeting,
-        }])
+        greetingContent = activeSessionData.greeting
       } else if (response.data.current_word) {
         // Page refresh fallback
         const word = response.data.current_word
         setCurrentWord(word)
-        setMessages([{
-          id: 'greeting',
-          role: 'laoshi',
-          content: `Let's practice with ${word.word} (${word.pinyin})! This word means "${word.meaning}". Try making a sentence using it.`,
-        }])
+        greetingContent = `Let's practice with ${word.word} (${word.pinyin})! This word means "${word.meaning}". Try making a sentence using it.`
+      }
+
+      setLoading(false)
+
+      if (greetingContent) {
+        setStatus('ai_typing')
+        await addLaoshiMessages(greetingContent)
       }
       setStatus('waiting_for_user')
     } catch (error) {
       console.error('Failed to load session:', error)
-    } finally {
       setLoading(false)
     }
   }
@@ -161,6 +174,27 @@ export default function PracticePanel() {
       content,
       feedback,
     }])
+  }
+
+  const addLaoshiMessages = async (content: string, feedback?: FeedbackData | null): Promise<void> => {
+    const parts = content.split(/\n\n+/).filter(p => p.trim())
+    if (parts.length === 0) return
+
+    for (let i = 0; i < parts.length; i++) {
+      if (i > 0) {
+        setStatus('ai_typing')
+        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 400))
+      }
+
+      const isLast = i === parts.length - 1
+      setMessages(prev => [...prev, {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        role: 'laoshi',
+        content: parts[i],
+        feedback: isLast ? feedback : undefined,
+        isGrouped: !isLast,
+      }])
+    }
   }
 
   const handleSubmit = async () => {
@@ -175,7 +209,7 @@ export default function PracticePanel() {
       const response = await practiceApi.sendMessage(session.id, sentence)
       const data = response.data
 
-      addMessage('laoshi', data.laoshi_response, data.feedback)
+      await addLaoshiMessages(data.laoshi_response, data.feedback)
       setSessionStats({
         words_practiced: data.words_practiced,
         words_total: data.words_total,
@@ -189,7 +223,7 @@ export default function PracticePanel() {
       }
     } catch (error) {
       console.error('Failed to submit:', error)
-      addMessage('laoshi', 'Sorry, something went wrong. Please try again.')
+      addMessage('laoshi', isRateLimitError(error) ? RATE_LIMIT_MESSAGE : 'Sorry, something went wrong. Please try again.')
       setStatus('waiting_for_user')
     }
   }
@@ -253,10 +287,13 @@ export default function PracticePanel() {
           setTimeout(() => {
             setShowDivider(true)
             setStatus('transitioning')
-            setTimeout(() => {
+            setTimeout(async () => {
               setShowDivider(false)
               if (data.current_word) setCurrentWord(data.current_word)
-              if (data.laoshi_response) addMessage('laoshi', data.laoshi_response)
+              if (data.laoshi_response) {
+                setStatus('ai_typing')
+                await addLaoshiMessages(data.laoshi_response)
+              }
               setStatus('waiting_for_user')
               setUserInput('')
             }, 600)
@@ -264,6 +301,9 @@ export default function PracticePanel() {
         }
       } catch (error) {
         console.error('Failed to get next word:', error)
+        if (isRateLimitError(error)) {
+          addMessage('laoshi', RATE_LIMIT_MESSAGE)
+        }
         setStatus('feedback_given')
       }
     }
@@ -344,8 +384,14 @@ export default function PracticePanel() {
             <div>
               <p className="text-sm font-medium text-warm-black leading-tight">Laoshi</p>
               <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-                <span className="text-[10px] text-green-600 font-medium">Online</span>
+                {status === 'ai_typing' || status === 'rating_typing' ? (
+                  <span className="text-[10px] text-warm-black/50 font-medium">typing...</span>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
+                    <span className="text-[10px] text-green-600 font-medium">Online</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -482,7 +528,7 @@ export default function PracticePanel() {
                   <button
                     onClick={handleSubmit}
                     disabled={!userInput.trim() || (status !== 'waiting_for_user' && status !== 'feedback_given')}
-                    className="flex items-center gap-1.5 px-6 py-2 rounded-full text-sm font-medium transition-colors bg-warm-gray/50 text-warm-black/50 hover:bg-sage hover:text-white disabled:opacity-50 disabled:hover:bg-warm-gray/50 disabled:hover:text-warm-black/50"
+                    className={`flex items-center gap-1.5 px-6 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-50 ${userInput.trim() ? 'bg-sage text-white hover:bg-sage-dark' : 'bg-warm-gray/50 text-warm-black/50 hover:bg-sage hover:text-white'}`}
                   >
                     Submit
                     <Send className="w-3.5 h-3.5" />

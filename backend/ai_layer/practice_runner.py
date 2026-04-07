@@ -63,7 +63,7 @@ async def run_with_retry(agent, input, context, session=None, max_attempts=3):
 
 def get_session(session_id: int):
     """Create a RedisSession for the given practice session.
-    
+
     Uses Redis-backed session storage for persistence across requests.
     Falls back to in-memory if Redis URI is not configured or connection fails.
     """
@@ -73,8 +73,20 @@ def get_session(session_id: int):
             "socket_connect_timeout": 10,
             "socket_keepalive": True,
         }
-        
+
         try:
+            # Eagerly test Redis connectivity with a synchronous ping.
+            # RedisSession.from_url is lazy and won't fail until async usage,
+            # which bypasses this try/except block.
+            import redis as sync_redis
+            test_client = sync_redis.from_url(
+                redis_url,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+            )
+            test_client.ping()
+            test_client.close()
+
             return RedisSession.from_url(
                 session_id=f"session:{session_id}",
                 url=redis_url,

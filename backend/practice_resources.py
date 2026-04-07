@@ -1,10 +1,19 @@
 """Practice session API endpoints."""
+import logging
 from flask import request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from openai import RateLimitError
 
 from models import User, UserSession, SessionWord, Deck
 from ai_layer.practice_runner import initialize_session, handle_message, advance_word, complete_session
+
+logger = logging.getLogger(__name__)
+
+RATE_LIMIT_RESPONSE = {
+    'error': 'rate_limit',
+    'message': 'AI provider rate limit exceeded. Add your own API key in Settings to continue.',
+}
 
 # Maximum message length to prevent abuse
 MAX_MESSAGE_LENGTH = 2000
@@ -30,7 +39,11 @@ class PracticeSessionResource(Resource):
             if not isinstance(words_count, int) or words_count < 1 or words_count > 50:
                 return {'error': 'words_count must be an integer between 1 and 50'}, 400
 
-        result, error = initialize_session(user_id, deck_id, words_count)
+        try:
+            result, error = initialize_session(user_id, deck_id, words_count)
+        except RateLimitError as e:
+            logger.warning(f"AI rate limit hit during session init: {e}")
+            return RATE_LIMIT_RESPONSE, 429
         if error:
             return {'error': error}, 400
         return result, 201
@@ -97,7 +110,11 @@ class PracticeMessageResource(Resource):
         if len(message) > MAX_MESSAGE_LENGTH:
             return {'error': f'Message must be at most {MAX_MESSAGE_LENGTH} characters'}, 400
 
-        result, error = handle_message(id, user_id, message)
+        try:
+            result, error = handle_message(id, user_id, message)
+        except RateLimitError as e:
+            logger.warning(f"AI rate limit hit during message: {e}")
+            return RATE_LIMIT_RESPONSE, 429
         if error:
             status = 404 if 'not found' in error.lower() else 400
             return {'error': error}, status
@@ -116,7 +133,11 @@ class PracticeNextWordResource(Resource):
             if not isinstance(quality, int) or quality < 0 or quality > 5:
                 return {'error': 'quality must be an integer between 0 and 5'}, 400
 
-        result, error = advance_word(id, user_id, quality)
+        try:
+            result, error = advance_word(id, user_id, quality)
+        except RateLimitError as e:
+            logger.warning(f"AI rate limit hit during advance_word: {e}")
+            return RATE_LIMIT_RESPONSE, 429
         if error:
             status = 404 if 'not found' in error.lower() else 400
             return {'error': error}, status
@@ -146,7 +167,11 @@ class PracticeEndSessionResource(Resource):
                 sw.update()
 
         # Complete the session
-        result, error = complete_session(id, user_id)
+        try:
+            result, error = complete_session(id, user_id)
+        except RateLimitError as e:
+            logger.warning(f"AI rate limit hit during session end: {e}")
+            return RATE_LIMIT_RESPONSE, 429
         if error:
             return {'error': error}, 400
         return result, 200

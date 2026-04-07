@@ -13,7 +13,9 @@ const Login = () => {
   const location = useLocation()
 
   // Get the page the user was trying to access before being redirected
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/home'
+  // Always land on /home for home deck detail pages so the placeholder shows first
+  const savedPath = (location.state as { from?: { pathname: string } })?.from?.pathname || '/home'
+  const from = savedPath.startsWith('/home/deck/') ? '/home' : savedPath
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

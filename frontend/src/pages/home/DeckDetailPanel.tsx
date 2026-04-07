@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import axios from 'axios'
 import { deckApi, practiceApi } from '../../lib/api'
 import type { DeckWithStats } from '../../types/api'
 import { useHome } from './HomeContext'
@@ -115,7 +116,11 @@ export default function DeckDetailPanel() {
       })
     } catch (error) {
       console.error('Failed to start practice:', error)
-      alert('Failed to start practice session. Please try again.')
+      if (axios.isAxiosError(error) && error.response?.status === 429) {
+        alert('AI rate limit reached. Add your own API key in Settings to continue practicing.')
+      } else {
+        alert('Failed to start practice session. Please try again.')
+      }
     } finally {
       setStartingPractice(false)
     }

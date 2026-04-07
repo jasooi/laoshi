@@ -5,7 +5,7 @@ import laoshiLogo from '../../assets/laoshi-logo.png'
 
 const RATINGS = [
   { value: 0, label: 'Blackout' },
-  { value: 1, label: 'Wrong' },
+  { value: 1, label: 'Very Hard' },
   { value: 2, label: 'Hard' },
   { value: 3, label: 'OK' },
   { value: 4, label: 'Good' },

@@ -48,6 +48,18 @@ function formatTimeAgo(dateString: string | null): string {
   return date.toLocaleDateString()
 }
 
+// A streak is "alive" if the user practiced today or yesterday
+function isStreakAlive(streak: StreakData): boolean {
+  if (streak.current_streak === 0 || !streak.last_practice_date) return false
+  const last = new Date(streak.last_practice_date)
+  const now = new Date()
+  // Compare calendar dates (not timestamps) to handle timezone edge cases
+  const lastDate = new Date(last.getFullYear(), last.getMonth(), last.getDate())
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffDays = (today.getTime() - lastDate.getTime()) / 86_400_000
+  return diffDays <= 1
+}
+
 interface DeckListItemProps {
   deck: DeckWithStats
   isActive: boolean
@@ -118,11 +130,15 @@ function DeckListItem({ deck, isActive, onClick }: DeckListItemProps) {
   )
 }
 
-export default function DeckListPanel() {
+interface DeckListPanelProps {
+  width?: number
+}
+
+export default function DeckListPanel({ width }: DeckListPanelProps) {
   const [decks, setDecks] = useState<DeckWithStats[]>([])
   const [streak, setStreak] = useState<StreakData>({ current_streak: 0, last_practice_date: null })
   const [loading, setLoading] = useState(true)
-  const { selectedDeckId, selectDeck } = useHome()
+  const { selectedDeckId, selectDeck, setDeckCount } = useHome()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -136,6 +152,7 @@ export default function DeckListPanel() {
         progressApi.getStreak(),
       ])
       setDecks(decksRes.data.decks)
+      setDeckCount(decksRes.data.decks.length)
       setStreak(streakRes.data)
     } catch (error) {
       console.error('Failed to load decks:', error)
@@ -151,7 +168,7 @@ export default function DeckListPanel() {
 
   if (loading) {
     return (
-      <div className="w-full md:w-80 lg:w-96 bg-warm-offwhite border-r border-warm-gray p-4">
+      <div className="bg-warm-offwhite border-r border-warm-gray p-4" style={width ? { width } : undefined}>
         <div className="animate-pulse space-y-4">
           <div className="h-12 bg-warm-gray rounded"></div>
           <div className="h-32 bg-warm-gray rounded"></div>
@@ -162,21 +179,23 @@ export default function DeckListPanel() {
   }
 
   return (
-    <div className="w-full md:w-80 lg:w-96 bg-warm-offwhite border-r border-warm-gray flex flex-col h-full">
-      {/* Streak badge */}
-      <div className="p-4 border-b border-warm-gray">
-        <div className="flex items-center justify-between">
+    <div className="bg-warm-offwhite border-r border-warm-gray flex flex-col h-full flex-shrink-0" style={width ? { width } : undefined}>
+      {/* Streak badge — height aligned to sidebar Home button bottom + 3px */}
+      <div className="h-[75px] px-4 border-b border-warm-gray flex items-center">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
-            <Flame className="w-5 h-5 text-orange-500" />
+            <Flame className={`w-5 h-5 ${isStreakAlive(streak) ? 'text-orange-500' : 'text-warm-muted'}`} />
             <span className="font-semibold text-warm-black">
-              {streak.current_streak} day streak
+              {isStreakAlive(streak)
+                ? `${streak.current_streak} day streak`
+                : 'Start practicing to begin a streak!'}
             </span>
           </div>
-          <span className="text-xs text-warm-muted">
-            {streak.last_practice_date
-              ? 'Keep it up!'
-              : 'Start practicing today!'}
-          </span>
+          {isStreakAlive(streak) && (
+            <span className="text-xs text-warm-muted">
+              Keep it up!
+            </span>
+          )}
         </div>
       </div>
 

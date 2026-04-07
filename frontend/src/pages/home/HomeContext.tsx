@@ -16,7 +16,9 @@ interface HomeContextValue {
   viewState: ViewState
   activeSessionData: ActiveSessionData | null
   summaryData: PracticeSummaryResponse | null
+  deckCount: number
   selectDeck: (deckId: number) => void
+  setDeckCount: (count: number) => void
   startPractice: (data: ActiveSessionData) => void
   onLoadingComplete: () => void
   endPractice: () => void
@@ -56,6 +58,11 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
   const [viewState, setViewState] = useState<ViewState>('home')
   const [activeSessionData, setActiveSessionData] = useState<ActiveSessionData | null>(null)
   const [summaryData, setSummaryData] = useState<PracticeSummaryResponse | null>(null)
+  const [deckCount, setDeckCountState] = useState(0)
+
+  const setDeckCount = useCallback((count: number) => {
+    setDeckCountState(count)
+  }, [])
 
   // Restore active session from localStorage on mount
   useEffect(() => {
@@ -108,7 +115,9 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
         viewState,
         activeSessionData,
         summaryData,
+        deckCount,
         selectDeck,
+        setDeckCount,
         startPractice,
         onLoadingComplete,
         endPractice,
