@@ -23,6 +23,7 @@ export interface User {
   id: number
   username?: string
   preferred_name?: string | null
+  onboarding_complete?: boolean
 }
 
 export interface UserSession {
@@ -182,6 +183,7 @@ export interface UserSettings {
   words_per_session: number | null
   deepseek_api_key: string | null
   gemini_api_key: string | null
+  onboarding_complete?: boolean
 }
 
 // Deck types
@@ -198,6 +200,7 @@ export interface Deck {
 export interface DeckWithStats extends Deck {
   word_count: number
   mastered_count: number
+  practiced_count: number
   mastery_percentage: number
   last_practiced_at: string | null
 }

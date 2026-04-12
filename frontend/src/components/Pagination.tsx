@@ -58,7 +58,7 @@ const Pagination = ({
   return (
     <div className="px-4 py-3 flex items-center justify-between">
       {/* Left: item count */}
-      <span className="text-sm text-gray-500">
+      <span className="text-sm text-warm-muted">
         {total === 0
           ? 'Showing 0 of 0 words'
           : `Showing ${start}\u2013${end} of ${total} words`}
@@ -72,8 +72,8 @@ const Pagination = ({
           disabled={!hasPrev}
           className={`px-3 py-1.5 text-sm rounded-lg ${
             hasPrev
-              ? 'text-gray-700 hover:bg-gray-50'
-              : 'text-gray-300 cursor-not-allowed'
+              ? 'text-warm-black hover:bg-warm-offwhite'
+              : 'text-warm-muted/50 cursor-not-allowed'
           }`}
         >
           &lt;
@@ -84,7 +84,7 @@ const Pagination = ({
           item === '...' ? (
             <span
               key={`ellipsis-${index}`}
-              className="px-3 py-1.5 text-sm text-gray-500"
+              className="px-3 py-1.5 text-sm text-warm-muted"
             >
               ...
             </span>
@@ -95,7 +95,7 @@ const Pagination = ({
               className={`px-3 py-1.5 text-sm min-w-[2rem] rounded-lg ${
                 item === page
                   ? 'bg-sage text-white'
-                  : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+                  : 'border border-warm-gray text-warm-black hover:bg-warm-offwhite'
               }`}
             >
               {item}
@@ -109,8 +109,8 @@ const Pagination = ({
           disabled={!hasNext}
           className={`px-3 py-1.5 text-sm rounded-lg ${
             hasNext
-              ? 'text-gray-700 hover:bg-gray-50'
-              : 'text-gray-300 cursor-not-allowed'
+              ? 'text-warm-black hover:bg-warm-offwhite'
+              : 'text-warm-muted/50 cursor-not-allowed'
           }`}
         >
           &gt;
@@ -119,11 +119,11 @@ const Pagination = ({
 
       {/* Right: per-page selector */}
       <div className="flex items-center gap-2">
-        <label className="text-sm text-gray-500">Per page:</label>
+        <label className="text-sm text-warm-muted">Per page:</label>
         <select
           value={perPage}
           onChange={(e) => onPerPageChange(Number(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-sage"
+          className="text-sm border border-warm-gray rounded-lg px-2 py-1.5 text-warm-black focus:outline-none focus:ring-2 focus:ring-sage"
         >
           {perPageOptions.map((option) => (
             <option key={option} value={option}>

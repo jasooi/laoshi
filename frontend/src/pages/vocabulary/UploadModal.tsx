@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import Papa from 'papaparse'
 import api from '../../lib/api'
+import ButtonSpinner from '../../components/ButtonSpinner'
 
 interface UploadModalProps {
   isOpen: boolean
@@ -146,17 +147,17 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
         {/* Modal Header */}
         <div className="p-6 pb-4">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xl font-semibold text-gray-900">Upload file</h2>
+            <h2 className="text-xl font-semibold text-warm-black">Upload file</h2>
             <button
               onClick={handleClose}
-              className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1 text-warm-muted hover:text-warm-black transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
-          <p className="text-sm text-gray-500">Only .csv files are accepted. Required columns: word, pinyin, meaning</p>
+          <p className="text-sm text-warm-muted">Only .csv files are accepted. Required columns: word, pinyin, meaning</p>
         </div>
 
         {/* Upload Area */}
@@ -171,7 +172,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
                 ? 'border-sage bg-sage-tint'
                 : selectedFile
                 ? 'border-sage bg-sage-tint'
-                : 'border-gray-300 hover:border-sage hover:bg-gray-50'
+                : 'border-warm-gray hover:border-sage hover:bg-warm-offwhite'
             }`}
           >
             <input
@@ -189,7 +190,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
                   </svg>
                 </div>
                 <p className="text-sage font-medium">{selectedFile.name}</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-warm-muted mt-1">
                   {(selectedFile.size / 1024).toFixed(1)} KB
                 </p>
               </>
@@ -202,9 +203,9 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
                 </div>
                 <p>
                   <span className="text-sage font-medium">Click to Upload</span>
-                  <span className="text-gray-600"> or drag and drop</span>
+                  <span className="text-warm-muted"> or drag and drop</span>
                 </p>
-                <p className="text-sm text-gray-400 mt-1">Maximum file size 10 MB</p>
+                <p className="text-sm text-warm-muted mt-1">Maximum file size 10 MB</p>
               </>
             )}
           </div>
@@ -212,10 +213,10 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
 
         {/* Source Name Input */}
         <div className="px-6 py-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-warm-black mb-1">
             Name your source file
           </label>
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-warm-muted mb-2">
             Words from this file will be tagged with the following name for easy identification
           </p>
           <input
@@ -223,7 +224,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
             placeholder="e.g., Kitchen Vocabulary"
             value={sourceName}
             onChange={(e) => setSourceName(e.target.value)}
-            className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+            className="w-full px-4 py-2.5 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
           />
         </div>
 
@@ -240,21 +241,16 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
         <div className="px-6 pb-6 flex items-center justify-end gap-3">
           <button
             onClick={handleClose}
-            className="px-5 py-2.5 text-gray-700 font-medium border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
+            className="px-5 py-2.5 text-warm-black font-medium border border-warm-gray rounded-full hover:bg-warm-offwhite transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleUpload}
             disabled={!selectedFile || !sourceName.trim() || uploading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/80 disabled:bg-gray-300 text-white font-medium rounded-full transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/80 disabled:bg-warm-gray text-white font-medium rounded-full transition-colors"
           >
-            {uploading && (
-              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            )}
+            {uploading && <ButtonSpinner />}
             {uploading ? 'Processing...' : 'Attach File'}
           </button>
         </div>

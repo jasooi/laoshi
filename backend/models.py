@@ -355,7 +355,8 @@ class User(db.Model):
                 return {
                     'id': self.id,
                     'username': self.username,
-                    'preferred_name': (self.profile.preferred_name if self.profile else None)
+                    'preferred_name': (self.profile.preferred_name if self.profile else None),
+                    'onboarding_complete': (self.profile.onboarding_complete if self.profile else False),
                 }
         else:
             return {
@@ -441,6 +442,7 @@ class UserProfile(db.Model):
     report_card_feedback = db.Column(db.Text, nullable=True)
     current_streak = db.Column(db.Integer, default=0)
     last_practice_date = db.Column(db.Date, nullable=True)
+    onboarding_complete = db.Column(db.Boolean, default=False, nullable=False)
     created_ds = db.Column(db.DateTime, default=datetime.utcnow)
     updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -452,6 +454,7 @@ class UserProfile(db.Model):
             'words_per_session': self.words_per_session,
             'has_deepseek_key': self.encrypted_deepseek_api_key is not None,
             'has_gemini_key': self.encrypted_gemini_api_key is not None,
+            'onboarding_complete': self.onboarding_complete,
         }
 
     def increment_key_version(self, provider: str):

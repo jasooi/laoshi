@@ -6,6 +6,7 @@ interface User {
   id: number
   username: string
   preferred_name: string | null
+  onboarding_complete: boolean
 }
 
 interface AuthContextType {
@@ -15,6 +16,7 @@ interface AuthContextType {
   isLoading: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  updateUser: (updates: Partial<User>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -83,6 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userResponse.data)
   }
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : null)
+  }, [])
+
   const logout = async () => {
     try {
       await axios.post('/api/token/revoke', {}, { withCredentials: true })
@@ -101,6 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

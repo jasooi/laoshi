@@ -19,14 +19,14 @@ const Header = () => {
   }, [])
 
   return (
-    <header className="h-16 border-b border-gray-200 px-6 flex items-center justify-between bg-white">
+    <header className="h-16 border-b border-warm-gray px-6 flex items-center justify-between bg-white">
       <div className="flex items-center gap-3">
         <span className="text-2xl" role="img" aria-label="time">
           {timeIcon}
         </span>
-        <h1 className="text-lg font-semibold text-gray-900">{greeting}</h1>
+        <h1 className="text-lg font-semibold text-warm-black">{greeting}</h1>
       </div>
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-warm-muted">
         Mastery: <span className="font-medium text-primary">0%</span>
       </div>
     </header>

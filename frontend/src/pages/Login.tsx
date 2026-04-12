@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import ButtonSpinner from '../components/ButtonSpinner'
 
 const Login = () => {
   const [username, setUsername] = useState('')
@@ -36,10 +37,10 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sage-tint via-pink-50 to-blue-100 p-4">
       <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+        <h1 className="text-2xl font-bold text-warm-black mb-2 text-center">
           Welcome back
         </h1>
-        <p className="text-gray-600 mb-8 text-center">
+        <p className="text-warm-muted mb-8 text-center">
           Log in to continue learning
         </p>
 
@@ -52,7 +53,7 @@ const Login = () => {
           )}
 
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="username" className="block text-sm font-medium text-warm-black mb-1">
               Username
             </label>
             <input
@@ -62,13 +63,13 @@ const Login = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+              className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Enter your username"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-warm-black mb-1">
               Password
             </label>
             <input
@@ -78,7 +79,7 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+              className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Enter your password"
             />
           </div>
@@ -88,11 +89,14 @@ const Login = () => {
             disabled={isSubmitting}
             className="w-full bg-sage hover:bg-sage/80 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Logging in...' : 'Log in'}
+            <span className="flex items-center justify-center gap-2">
+              {isSubmitting && <ButtonSpinner />}
+              {isSubmitting ? 'Logging in...' : 'Log in'}
+            </span>
           </button>
         </form>
 
-        <p className="text-center mt-6 text-gray-600">
+        <p className="text-center mt-6 text-warm-muted">
           Don't have an account?{' '}
           <Link to="/register" className="text-sage hover:text-sage/80 font-medium">
             Register

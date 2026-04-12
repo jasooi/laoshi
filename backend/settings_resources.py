@@ -19,6 +19,7 @@ class UserSettingsResource(Resource):
                 'words_per_session': None,
                 'has_deepseek_key': False,
                 'has_gemini_key': False,
+                'onboarding_complete': False,
             }, 200
 
         return profile.format_settings(), 200
@@ -52,6 +53,11 @@ class UserSettingsResource(Resource):
 
         if 'words_per_session' in data:
             profile.words_per_session = data['words_per_session']  # None resets to default
+
+        if 'onboarding_complete' in data:
+            if not isinstance(data['onboarding_complete'], bool):
+                return {"error": "onboarding_complete must be a boolean"}, 400
+            profile.onboarding_complete = data['onboarding_complete']
 
         profile.update()
         return profile.format_settings(), 200

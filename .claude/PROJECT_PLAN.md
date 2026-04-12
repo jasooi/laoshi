@@ -44,9 +44,9 @@ PRD.md (what to build & why)
 
 | Phase | Scope | Status |
 |---|---|---|
-| **Phase 1 (MVP)** | Auth, vocabulary CRUD + CSV import, AI practice sessions, home stats, settings, security hardening | **Done** (bug-fixing) |
-| **Phase 2** | Report Card dashboard, custom collections, pre-defined vocab sets | **Done** (M6) |
-| Phase 3 | Saved sentences, spaced repetition (SuperMemo), community-contributed vocab sets | Not Started |
+| **Phase 1 (MVP)** | Auth, vocabulary CRUD + CSV import, AI practice sessions, home stats, settings, security hardening | **Done** |
+| **Phase 2** | Decks + SRS, Report Card, practice redesign, UI polish, onboarding wizard | **In Progress** (M9) |
+| Phase 3 | Saved sentences, pre-defined Laoshi library, community-contributed vocab sets | Not Started |
 | Phase 4 | Contextual hints (images/notes on words), voice chat | Not Started |
 
 ---
@@ -236,8 +236,8 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 ## Phase 2 -- Enhanced Features
 
 ### Milestone 5: Decks (Collections Redesign)
-**Status:** In Progress
-**Completed:** TBD
+**Status:** Done
+**Completed:** 2026-03-20
 **Spec folder:** `.claudedocs/m5-decks/`
 **PRD stories:** #5 (Custom collections as "Decks"), #8 (Select deck to start session), Day streak tracking
 
@@ -261,92 +261,92 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 | # | Task | Status |
 |---|---|---|
 | | **Phase A: Database Schema** | |
-| 5.1 | Backend: Create `Deck` model (id, name, description, user_id FK, laoshi_message, created_ds, updated_ds) with relationships to User, Word, UserSession | [ ] |
-| 5.2 | Backend: Add `deck_id` FK + SRS fields (repetitions, interval_days, ease_factor, next_review_date) + mastery fields (last_quality, marked_as_known, is_mastered) to `Word`, **remove** confidence_score, add `update_mastery_status()` method | [ ] |
-| 5.3 | Backend: Add `deck_id` FK (nullable) to `UserSession` model + `deck` relationship | [ ] |
-| 5.4 | Backend: Add `current_streak` (Integer, default=0) and `last_practice_date` (Date, nullable) to `UserProfile` | [ ] |
-| 5.5 | Backend: Update `Word.format_data()` and `UserSession.format_data()` to include `deck_id` | [ ] |
-| 5.6 | Backend: Create Alembic migration for Deck table + SRS/mastery fields + **drop** confidence_score + data migration (create "My Words" deck per user, assign existing words, SRS fields auto-initialized via server defaults) | [ ] |
-| 5.7 | Backend: Run migration and verify existing data migrated correctly | [ ] |
+| 5.1 | Backend: Create `Deck` model (id, name, description, user_id FK, laoshi_message, created_ds, updated_ds) with relationships to User, Word, UserSession | [x] |
+| 5.2 | Backend: Add `deck_id` FK + SRS fields (repetitions, interval_days, ease_factor, next_review_date) + mastery fields (last_quality, marked_as_known, is_mastered) to `Word`, **remove** confidence_score, add `update_mastery_status()` method | [x] |
+| 5.3 | Backend: Add `deck_id` FK (nullable) to `UserSession` model + `deck` relationship | [x] |
+| 5.4 | Backend: Add `current_streak` (Integer, default=0) and `last_practice_date` (Date, nullable) to `UserProfile` | [x] |
+| 5.5 | Backend: Update `Word.format_data()` and `UserSession.format_data()` to include `deck_id` | [x] |
+| 5.6 | Backend: Create Alembic migration for Deck table + SRS/mastery fields + **drop** confidence_score + data migration (create "My Words" deck per user, assign existing words, SRS fields auto-initialized via server defaults) | [x] |
+| 5.7 | Backend: Run migration and verify existing data migrated correctly | [x] |
 | | **Phase B: Backend Deck API** | |
-| 5.8 | Backend: Create `deck_resources.py` — `GET /api/decks` with computed stats (word_count, mastered_count where is_mastered=true, mastery_percentage, last_practiced_at) using SQLAlchemy subqueries to avoid N+1 | [ ] |
-| 5.9 | Backend: `POST /api/decks` — create empty deck (name, description) | [ ] |
-| 5.10 | Backend: `GET /api/decks/:id` — deck detail + stats | [ ] |
-| 5.11 | Backend: `PUT /api/decks/:id` — update name/description | [ ] |
-| 5.12 | Backend: `DELETE /api/decks/:id` — delete deck + cascade delete words | [ ] |
-| 5.13 | Backend: `GET /api/decks/:id/words` — paginated word list for deck (reuse `paginate_query`) | [ ] |
-| 5.14 | Backend: `POST /api/decks/:id/words` — create words inside deck (replaces old `POST /api/words`) | [ ] |
-| 5.15 | Backend: `POST /api/decks/combine` — create new deck + copy words from source decks | [ ] |
-| 5.16 | Backend: `GET /api/progress/streak` — return current_streak and last_practice_date | [ ] |
-| 5.17 | Backend: Register all deck resources in `app.py` | [ ] |
-| 5.18 | Backend: **Remove** `POST /api/words` and `DELETE /api/words` endpoints from `resources.py` | [ ] |
-| 5.19 | Backend: Update `GET /api/words` to accept optional `deck_id` query param for filtering | [ ] |
+| 5.8 | Backend: Create `deck_resources.py` — `GET /api/decks` with computed stats (word_count, mastered_count where is_mastered=true, mastery_percentage, last_practiced_at) using SQLAlchemy subqueries to avoid N+1 | [x] |
+| 5.9 | Backend: `POST /api/decks` — create empty deck (name, description) | [x] |
+| 5.10 | Backend: `GET /api/decks/:id` — deck detail + stats | [x] |
+| 5.11 | Backend: `PUT /api/decks/:id` — update name/description | [x] |
+| 5.12 | Backend: `DELETE /api/decks/:id` — delete deck + cascade delete words | [x] |
+| 5.13 | Backend: `GET /api/decks/:id/words` — paginated word list for deck (reuse `paginate_query`) | [x] |
+| 5.14 | Backend: `POST /api/decks/:id/words` — create words inside deck (replaces old `POST /api/words`) | [x] |
+| 5.15 | Backend: `POST /api/decks/combine` — create new deck + copy words from source decks | [x] |
+| 5.16 | Backend: `GET /api/progress/streak` — return current_streak and last_practice_date | [x] |
+| 5.17 | Backend: Register all deck resources in `app.py` | [x] |
+| 5.18 | Backend: **Remove** `POST /api/words` and `DELETE /api/words` endpoints from `resources.py` | [x] |
+| 5.19 | Backend: Update `GET /api/words` to accept optional `deck_id` query param for filtering | [x] |
 | | **Phase C: Backend Practice & AI Changes** | |
-| 5.20 | Backend: Update `POST /api/practice/sessions` to require `deck_id` in request body | [ ] |
-| 5.21 | Backend: Modify `initialize_session()` to use SRS word selection (40% new where next_review_date IS NULL, 60% review where next_review_date≤today, buffer pools, fallback to future words) | [ ] |
-| 5.22 | Backend: Set `session.deck_id = deck_id` in `initialize_session()` | [ ] |
-| 5.23 | Backend: Create `POST /api/practice/sessions/:id/end` endpoint — marks remaining SessionWords as skipped, calls `complete_session()` | [ ] |
-| 5.24 | Backend: Update `build_summary_prompt()` in `chat_agents.py` to add `deck_oneliner` to JSON output spec (max 80 chars, progress + next focus) | [ ] |
-| 5.25 | Backend: Modify `complete_session()` in `practice_runner.py` to extract `deck_oneliner` from summary JSON and update `Deck.laoshi_message` | [ ] |
-| 5.26 | Backend: Implement streak update logic in `complete_session()` — check last_practice_date, increment or reset current_streak, update last_practice_date to today | [ ] |
-| 5.27 | Backend: Implement `update_srs(word, quality)` — SM-2 algorithm with modified intervals (1d→3d→7d→~18d), quality <3 resets, ease_factor updates, fast-track quality 5 on rep 0 | [ ] |
-| 5.28 | Backend: Implement `mark_word_as_known(word)` — sets repetitions=5, interval=90, is_mastered=true, last_quality=5 | [ ] |
-| 5.29 | Backend: Modify `advance_word()` to accept `quality` param, call `update_srs()`, call `word.update_mastery_status()`, handle skip (defer by 1 day) | [ ] |
-| 5.30 | Backend: Create `POST /api/words/:id/mark-as-known` endpoint — calls `mark_word_as_known()`, returns word data | [ ] |
+| 5.20 | Backend: Update `POST /api/practice/sessions` to require `deck_id` in request body | [x] |
+| 5.21 | Backend: Modify `initialize_session()` to use SRS word selection (40% new where next_review_date IS NULL, 60% review where next_review_date≤today, buffer pools, fallback to future words) | [x] |
+| 5.22 | Backend: Set `session.deck_id = deck_id` in `initialize_session()` | [x] |
+| 5.23 | Backend: Create `POST /api/practice/sessions/:id/end` endpoint — marks remaining SessionWords as skipped, calls `complete_session()` | [x] |
+| 5.24 | Backend: Update `build_summary_prompt()` in `chat_agents.py` to add `deck_oneliner` to JSON output spec (max 80 chars, progress + next focus) | [x] |
+| 5.25 | Backend: Modify `complete_session()` in `practice_runner.py` to extract `deck_oneliner` from summary JSON and update `Deck.laoshi_message` | [x] |
+| 5.26 | Backend: Implement streak update logic in `complete_session()` — check last_practice_date, increment or reset current_streak, update last_practice_date to today | [x] |
+| 5.27 | Backend: Implement `update_srs(word, quality)` — SM-2 algorithm with modified intervals (1d→3d→7d→~18d), quality <3 resets, ease_factor updates, fast-track quality 5 on rep 0 | [x] |
+| 5.28 | Backend: Implement `mark_word_as_known(word)` — sets repetitions=5, interval=90, is_mastered=true, last_quality=5 | [x] |
+| 5.29 | Backend: Modify `advance_word()` to accept `quality` param, call `update_srs()`, call `word.update_mastery_status()`, handle skip (defer by 1 day) | [x] |
+| 5.30 | Backend: Create `POST /api/words/:id/mark-as-known` endpoint — calls `mark_word_as_known()`, returns word data | [x] |
 | | **Phase D: Frontend Types & API Client** | |
-| 5.31 | Frontend: Add `DeckListItem`, `DeckWithStats` interfaces + update `Word` interface with SRS fields to `types/api.ts`, **remove** confidence_score | [ ] |
-| 5.32 | Frontend: Create `deckApi` helper group in `lib/api.ts` (getDecks, createDeck, updateDeck, deleteDeck, getDeckWords, addWordsToDeck, combineDecks) | [ ] |
-| 5.33 | Frontend: Add `getStreak()` to `progressApi`, update `practiceApi.advanceWord()` to accept `quality`, add `wordsApi.markAsKnown()` | [ ] |
-| 5.34 | Frontend: Update `practiceApi.startSession()` to accept `deckId` parameter, add `practiceApi.endSession(sessionId)` | [ ] |
-| 5.35 | Frontend: **Remove** old bulk word creation API calls from codebase | [ ] |
+| 5.31 | Frontend: Add `DeckListItem`, `DeckWithStats` interfaces + update `Word` interface with SRS fields to `types/api.ts`, **remove** confidence_score | [x] |
+| 5.32 | Frontend: Create `deckApi` helper group in `lib/api.ts` (getDecks, createDeck, updateDeck, deleteDeck, getDeckWords, addWordsToDeck, combineDecks) | [x] |
+| 5.33 | Frontend: Add `getStreak()` to `progressApi`, update `practiceApi.advanceWord()` to accept `quality`, add `wordsApi.markAsKnown()` | [x] |
+| 5.34 | Frontend: Update `practiceApi.startSession()` to accept `deckId` parameter, add `practiceApi.endSession(sessionId)` | [x] |
+| 5.35 | Frontend: **Remove** old bulk word creation API calls from codebase | [x] |
 | | **Phase E: Frontend Home Page Rewrite** | |
-| 5.36 | Frontend: Create `pages/home/HomeContext.tsx` — React context with selectedDeckId, activePracticeSessionId, selectDeck(), startPractice(), endPractice() | [ ] |
-| 5.37 | Frontend: Create `pages/home/DeckListPanel.tsx` — left panel with GET /api/decks, streak badge, DeckListItem components, "+ New Deck" button | [ ] |
-| 5.38 | Frontend: Create `pages/home/DeckListItem.tsx` — growth icon (🌱🌿🌸 based on mastery %), recency color (green/yellow/red/grey), progress bar, word count, laoshi message preview | [ ] |
-| 5.39 | Frontend: Create `pages/home/DeckDetailPanel.tsx` — right panel with circular progress ring (SVG), stats, full laoshi message, "Start Practice" and "Manage in Library →" buttons | [ ] |
-| 5.40 | Frontend: Create `pages/home/EmptyDeckPlaceholder.tsx` — default right panel with Laoshi avatar, "Select a deck to begin", streak counter | [ ] |
-| 5.41 | Frontend: Create `pages/home/EndSessionModal.tsx` — confirmation modal for mid-session deck switch | [ ] |
-| 5.42 | Frontend: Rewrite `pages/Home.tsx` — split-panel layout with DeckListPanel (left) + Outlet (right), wrap in HomeProvider | [ ] |
-| 5.43 | Frontend: Update `App.tsx` routing — nested routes under /home (`/home`, `/home/deck/:deckId`, `/home/deck/:deckId/practice`), remove standalone `/practice` route | [ ] |
+| 5.36 | Frontend: Create `pages/home/HomeContext.tsx` — React context with selectedDeckId, activePracticeSessionId, selectDeck(), startPractice(), endPractice() | [x] |
+| 5.37 | Frontend: Create `pages/home/DeckListPanel.tsx` — left panel with GET /api/decks, streak badge, DeckListItem components, "+ New Deck" button | [x] |
+| 5.38 | Frontend: Create `pages/home/DeckListItem.tsx` — growth icon (🌱🌿🌸 based on mastery %), recency color (green/yellow/red/grey), progress bar, word count, laoshi message preview | [x] |
+| 5.39 | Frontend: Create `pages/home/DeckDetailPanel.tsx` — right panel with circular progress ring (SVG), stats, full laoshi message, "Start Practice" and "Manage in Library →" buttons | [x] |
+| 5.40 | Frontend: Create `pages/home/EmptyDeckPlaceholder.tsx` — default right panel with Laoshi avatar, "Select a deck to begin", streak counter | [x] |
+| 5.41 | Frontend: Create `pages/home/EndSessionModal.tsx` — confirmation modal for mid-session deck switch | [x] |
+| 5.42 | Frontend: Rewrite `pages/Home.tsx` — split-panel layout with DeckListPanel (left) + Outlet (right), wrap in HomeProvider | [x] |
+| 5.43 | Frontend: Update `App.tsx` routing — nested routes under /home (`/home`, `/home/deck/:deckId`, `/home/deck/:deckId/practice`), remove standalone `/practice` route | [x] |
 | | **Phase F: Frontend Inline Practice Panel & Quality Rating** | |
-| 5.44 | Frontend: Create `pages/home/PracticePanel.tsx` — refactor Practice.tsx logic inline, chat area center, collapsible word panel right side, close button top right | [ ] |
-| 5.45 | Frontend: Create quality rating menu component — 6 buttons (0-5) with emoji + labels, appears after "Next Word", blocks until selection, calls `advanceWord(quality)` | [ ] |
-| 5.46 | Frontend: Add "Mark as Known" button to word card — only for new words (next_review_date=null), calls `wordsApi.markAsKnown()`, removes word from session | [ ] |
-| 5.47 | Frontend: Extract practice session state logic into custom `usePracticeSession` hook for reusability | [ ] |
-| 5.48 | Frontend: Remove practiced/skipped word lists from session UI (keep only current word panel) | [ ] |
-| 5.49 | Frontend: Wire close button to `POST /api/practice/sessions/:id/end`, show SessionSummary inline | [ ] |
-| 5.50 | Frontend: Update `SessionSummary.tsx` to support inline rendering mode (not full-screen overlay) | [ ] |
-| 5.51 | Frontend: Update SessionSummary "Back to Home" to navigate to `/home/deck/:deckId` instead of `/home` | [ ] |
-| 5.52 | Frontend: **Delete** `pages/Practice.tsx` (logic fully moved to PracticePanel) | [ ] |
+| 5.44 | Frontend: Create `pages/home/PracticePanel.tsx` — refactor Practice.tsx logic inline, chat area center, collapsible word panel right side, close button top right | [x] |
+| 5.45 | Frontend: Create quality rating menu component — 6 buttons (0-5) with emoji + labels, appears after "Next Word", blocks until selection, calls `advanceWord(quality)` | [x] |
+| 5.46 | Frontend: Add "Mark as Known" button to word card — only for new words (next_review_date=null), calls `wordsApi.markAsKnown()`, removes word from session | [x] |
+| 5.47 | Frontend: Extract practice session state logic into custom `usePracticeSession` hook for reusability | [x] |
+| 5.48 | Frontend: Remove practiced/skipped word lists from session UI (keep only current word panel) | [x] |
+| 5.49 | Frontend: Wire close button to `POST /api/practice/sessions/:id/end`, show SessionSummary inline | [x] |
+| 5.50 | Frontend: Update `SessionSummary.tsx` to support inline rendering mode (not full-screen overlay) | [x] |
+| 5.51 | Frontend: Update SessionSummary "Back to Home" to navigate to `/home/deck/:deckId` instead of `/home` | [x] |
+| 5.52 | Frontend: **Delete** `pages/Practice.tsx` (logic fully moved to PracticePanel) | [x] |
 | | **Phase G: Frontend Library Page** | |
-| 5.53 | Frontend: Create `pages/Library.tsx` — deck card view, "Create New Deck" button, per-deck actions (edit/delete/upload CSV) | [ ] |
-| 5.54 | Frontend: Create `pages/library/CreateDeckModal.tsx` — name + description fields, options: "Start empty" / "Upload CSV" / "Combine from existing decks" | [ ] |
-| 5.55 | Frontend: Create `pages/library/DeckWordsView.tsx` — words table for a deck (reuse Vocabulary.tsx table pattern), search/sort/paginate, edit/delete words, upload CSV button | [ ] |
-| 5.56 | Frontend: Create `pages/library/CombineDecksModal.tsx` — multi-select decks, name + description for new deck, info note about word copying | [ ] |
-| 5.57 | Frontend: Move `pages/vocabulary/UploadModal.tsx` to `pages/library/UploadModal.tsx`, update to accept `deckId` prop, call new 2-step CSV flow (create deck → upload words) | [ ] |
-| 5.58 | Frontend: Move `pages/vocabulary/EditWordModal.tsx` to `pages/library/EditWordModal.tsx` | [ ] |
-| 5.59 | Frontend: Update `App.tsx` routing — add `/library` and `/library/deck/:deckId`, **remove** `/vocabulary` route | [ ] |
-| 5.60 | Frontend: **Delete** `pages/Vocabulary.tsx` (replaced by Library.tsx) | [ ] |
+| 5.53 | Frontend: Create `pages/Library.tsx` — deck card view, "Create New Deck" button, per-deck actions (edit/delete/upload CSV) | [x] |
+| 5.54 | Frontend: Create `pages/library/CreateDeckModal.tsx` — name + description fields, options: "Start empty" / "Upload CSV" / "Combine from existing decks" | [x] |
+| 5.55 | Frontend: Create `pages/library/DeckWordsView.tsx` — words table for a deck (reuse Vocabulary.tsx table pattern), search/sort/paginate, edit/delete words, upload CSV button | [x] |
+| 5.56 | Frontend: Create `pages/library/CombineDecksModal.tsx` — multi-select decks, name + description for new deck, info note about word copying | [x] |
+| 5.57 | Frontend: Move `pages/vocabulary/UploadModal.tsx` to `pages/library/UploadModal.tsx`, update to accept `deckId` prop, call new 2-step CSV flow (create deck → upload words) | [x] |
+| 5.58 | Frontend: Move `pages/vocabulary/EditWordModal.tsx` to `pages/library/EditWordModal.tsx` | [x] |
+| 5.59 | Frontend: Update `App.tsx` routing — add `/library` and `/library/deck/:deckId`, **remove** `/vocabulary` route | [x] |
+| 5.60 | Frontend: **Delete** `pages/Vocabulary.tsx` (replaced by Library.tsx) | [x] |
 | | **Phase H: Frontend Sidebar & Color Scheme** | |
-| 5.61 | Frontend: Update `components/Sidebar.tsx` — rename "Vocabulary" to "Library", change path to `/library`, update icon if needed | [ ] |
-| 5.62 | Frontend: Define warm color scheme in `tailwind.config.ts` — primary (sage/olive green), accent (muted amber/terracotta), backgrounds (warm grays stone-50/100) | [ ] |
-| 5.63 | Frontend: Apply new color scheme across all components (replace purple #9333EA) | [ ] |
+| 5.61 | Frontend: Update `components/Sidebar.tsx` — rename "Vocabulary" to "Library", change path to `/library`, update icon if needed | [x] |
+| 5.62 | Frontend: Define warm color scheme in `tailwind.config.ts` — primary (sage/olive green), accent (muted amber/terracotta), backgrounds (warm grays stone-50/100) | [x] |
+| 5.63 | Frontend: Apply new color scheme across all components (replace purple #9333EA) | [x] |
 | | **Phase I: Testing** | |
-| 5.64 | Backend: Create `tests/test_deck_api.py` — unit + integration tests for all deck endpoints (auth, stats with is_mastered, sorting, cascade delete) | [ ] |
-| 5.65 | Backend: Unit tests for SRS functions — `update_srs()` (quality 0-5, intervals, ease_factor), `Word.update_mastery_status()`, `mark_word_as_known()`, SRS word selection (40/60 ratio, buffers) | [ ] |
-| 5.66 | Backend: Unit tests for streak logic in `practice_runner.py` | [ ] |
-| 5.67 | Backend: Integration tests for `POST /next-word` with quality param (SRS state updates), `POST /mark-as-known` (fast-track verification) | [ ] |
-| 5.68 | Backend: Update existing tests broken by API changes (removal of POST /api/words, removal of confidence_score, SRS fields, deck_id on sessions) | [ ] |
-| 5.69 | Frontend: Component tests for new Home components (DeckListPanel, DeckDetailPanel, PracticePanel, quality rating menu) | [ ] |
-| 5.70 | Frontend: Component tests for Library page components (CreateDeckModal, CombineDecksModal, DeckWordsView) | [ ] |
-| 5.71 | E2E: Fresh user → create deck → practice → quality rating → SRS intervals update → mastery % updates → growth icon changes (🌱→🌿) | [ ] |
-| 5.72 | E2E: "Mark as Known" button → click → word fast-tracked to 90 days | [ ] |
-| 5.73 | E2E: Practice session → 40% new, 60% review words selected → overdue first | [ ] |
-| 5.74 | E2E: Rate quality 5 → mastered → rate quality 3 → not mastered | [ ] |
-| 5.75 | E2E: Existing user → words migrated to "My Words" with SRS fields → old sessions visible | [ ] |
-| 5.76 | E2E: Mid-session close → remaining words skipped → summary inline | [ ] |
-| 5.77 | E2E: Mid-session deck switch → modal → session ends | [ ] |
-| 5.78 | E2E: Combine decks → words copied with SRS state preserved | [ ] |
+| 5.64 | Backend: Create `tests/test_deck_api.py` — unit + integration tests for all deck endpoints (auth, stats with is_mastered, sorting, cascade delete) | [x] |
+| 5.65 | Backend: Unit tests for SRS functions — `update_srs()` (quality 0-5, intervals, ease_factor), `Word.update_mastery_status()`, `mark_word_as_known()`, SRS word selection (40/60 ratio, buffers) | [x] |
+| 5.66 | Backend: Unit tests for streak logic in `practice_runner.py` | [x] |
+| 5.67 | Backend: Integration tests for `POST /next-word` with quality param (SRS state updates), `POST /mark-as-known` (fast-track verification) | [x] |
+| 5.68 | Backend: Update existing tests broken by API changes (removal of POST /api/words, removal of confidence_score, SRS fields, deck_id on sessions) | [x] |
+| 5.69 | Frontend: Component tests for new Home components (DeckListPanel, DeckDetailPanel, PracticePanel, quality rating menu) | [x] |
+| 5.70 | Frontend: Component tests for Library page components (CreateDeckModal, CombineDecksModal, DeckWordsView) | [x] |
+| 5.71 | E2E: Fresh user → create deck → practice → quality rating → SRS intervals update → mastery % updates → growth icon changes (🌱→🌿) | [x] |
+| 5.72 | E2E: "Mark as Known" button → click → word fast-tracked to 90 days | [x] |
+| 5.73 | E2E: Practice session → 40% new, 60% review words selected → overdue first | [x] |
+| 5.74 | E2E: Rate quality 5 → mastered → rate quality 3 → not mastered | [x] |
+| 5.75 | E2E: Existing user → words migrated to "My Words" with SRS fields → old sessions visible | [x] |
+| 5.76 | E2E: Mid-session close → remaining words skipped → summary inline | [x] |
+| 5.77 | E2E: Mid-session deck switch → modal → session ends | [x] |
+| 5.78 | E2E: Combine decks → words copied with SRS state preserved | [x] |
 
 ---
 
@@ -409,21 +409,86 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 
 ---
 
+### Milestone 7: Practice Redesign
+**Status:** Done
+**Completed:** 2026-03-28
+**Spec folder:** `.claudedocs/m7-practice-redesign/`
+
+**Scope:** Complete overhaul of the practice session UX. Home page rewritten with ViewState-driven conditional rendering via HomeContext (`'home' | 'loading' | 'practicing' | 'summary'`). New components: ConfidenceRating, LoadingRitual, FloatingWordPill. PracticePanel.tsx rewritten with PracticeStatus state machine. Backend: `srs_snapshot` column on SessionWord for undo/redo ratings + `RerateWordResource` endpoint. Practice session data persisted to localStorage for crash recovery.
+
+| # | Task | Status |
+|---|---|---|
+| 7.x | All tasks (see `.claudedocs/m7-practice-redesign/tasks.md` for full breakdown) | [x] |
+| | 19 backend tests (test_rerate_api + test_srs_snapshot) | [x] |
+| | 40 frontend tests (HomeContext + ConfidenceRating) | [x] |
+| 7.26 | Alembic migration for srs_snapshot on prod DB | [~] |
+
+---
+
+### Milestone 8: Final UI Fixes
+**Status:** Done
+**Completed:** 2026-04-08
+**Spec folder:** `.claudedocs/m8-final-ui-fixes/`
+
+**Scope:** Frontend-only polish. Added `deckCount` state to HomeContext so EmptyDeckPlaceholder can show conditional title ("Add a deck" vs "Select a deck"). Removed Laoshi logo from sidebar. Redesigned EmptyDeckPlaceholder with circular Laoshi avatar and contextual messaging.
+
+| # | Task | Status |
+|---|---|---|
+| 8.1 | Add deckCount state to HomeContext | [x] |
+| 8.2 | Report deck count from DeckListPanel | [x] |
+| 8.3 | Remove Laoshi logo from Sidebar | [x] |
+| 8.4 | Redesign EmptyDeckPlaceholder | [x] |
+| 8.5 | TypeScript build check | [x] |
+| 8.6 | Run existing frontend tests | [x] |
+
+---
+
+### Milestone 9: Onboarding Flow
+**Status:** In Progress
+**Spec folder:** `.claudedocs/m9-onboarding-flow/`
+**PRD stories:** #2 (Guided onboarding -- full wizard implementation)
+
+**Scope:** 4-card onboarding wizard for first-time users. Collects preferred name (card 1), introduces Laoshi (card 2), explains decks (card 3), and previews practice + SRS (card 4). New `onboarding_complete` boolean on UserProfile with Alembic migration that backfills existing users. Welcome.tsx conditionally renders wizard or redirects to /home. framer-motion slide animations between cards.
+
+| # | Task | Status |
+|---|---|---|
+| | **Phase 1: Backend Model & API** | |
+| 9.1 | Add `onboarding_complete` column to UserProfile model | [x] |
+| 9.2 | Accept `onboarding_complete` in PUT /api/settings | [x] |
+| 9.3 | Create Alembic migration | [x] |
+| 9.4 | Run migration on local DB | [ ] |
+| | **Phase 2: Frontend Types & Auth Context** | |
+| 9.5 | Update TypeScript types | [x] |
+| 9.6 | Update AuthContext with `onboarding_complete` and `updateUser` | [x] |
+| | **Phase 3: Onboarding UI Components** | |
+| 9.7 | Create StepIndicator component | [x] |
+| 9.8 | Create card components (NameCard, MeetLaoshiCard, DecksCard, PracticeCard) | [x] |
+| 9.9 | Create OnboardingWizard orchestrator | [x] |
+| 9.10 | Update Welcome.tsx | [x] |
+| | **Phase 4: Build Verification** | |
+| 9.11 | TypeScript build check | [ ] |
+| 9.12 | Vite build check | [ ] |
+| | **Phase 5: Manual E2E Testing** | |
+| 9.13 | Test new user onboarding flow | [ ] |
+| 9.14 | Test existing user bypass | [ ] |
+
+---
+
 ## Phase 3 -- Smart Learning (future)
 
-### Milestone 7: Saved Sentences
+### Milestone 10: Saved Sentences
 **Status:** Not Started
 **PRD stories:** #14 (Save correct sentences to word)
 
-### Milestone 8: Spaced Repetition & Community Sets
+### Milestone 11: Pre-defined Laoshi Library & Community Sets
 **Status:** Not Started
-**PRD stories:** SuperMemo algorithm for flashcard scheduling, community-contributed vocabulary sets
+**PRD stories:** #4 (Browse/import pre-defined sets), community-contributed vocabulary sets
 
 ---
 
 ## Phase 4 -- Rich Media & Voice (future)
 
-### Milestone 9: Contextual Hints & Voice Chat
+### Milestone 12: Contextual Hints & Voice Chat
 **Status:** Not Started
 **PRD stories:** #20 (Photos/notes on words), voice chat for spoken sentence practice
 
@@ -434,9 +499,9 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 | Story | Description | Milestone | Phase |
 |---|---|---|---|
 | #1 | Register & login | M1 | 1 |
-| #2 | Guided onboarding | M1 | 1 |
+| #2 | Guided onboarding | M1 (basic) / M9 (full wizard) | 1 / 2 |
 | #3 | Upload CSV vocabulary | M2 | 1 |
-| #4 | Browse/import pre-defined sets | M5 | 2 |
+| #4 | Browse/import pre-defined sets | M11 | 3 |
 | #5 | Create custom collections | M5 | 2 |
 | #6 | Search, filter, sort vocabulary | M2 | 1 |
 | #7 | Edit/delete words | M2 | 1 |
@@ -446,13 +511,13 @@ Resolve structural issues blocking all other milestones: API path mismatches bet
 | #11 | Detailed feedback | M3 | 1 |
 | #12 | Skip words | M3 | 1 |
 | #13 | Toggle pinyin/definition | M3 | 1 |
-| #14 | Save correct sentences | M7 | 3 |
+| #14 | Save correct sentences | M10 | 3 |
 | #15 | Home page stats | M4 | 1 |
 | #16 | Report Card dashboard | M6 | 2 |
-| #17 | Confidence scores per word | M3 | 1 |
+| #17 | Confidence scores per word | M3 (basic) / M5 (SRS replaces) | 1 / 2 |
 | #18 | Configure words per session | M4 | 1 |
 | #19 | BYOK API key | M4 | 1 |
-| #20 | Photos/notes on words | M9 | 4 |
+| #20 | Photos/notes on words | M12 | 4 |
 
 ---
 

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { settingsApi } from '../../lib/api'
+import ButtonSpinner from '../../components/ButtonSpinner'
 
 interface EditApiKeyModalProps {
   isOpen: boolean
@@ -98,13 +99,13 @@ export default function EditApiKeyModal({
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full mx-4 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-warm-black">
             Edit {providerLabels[provider]} API Key
           </h2>
           <button
             onClick={handleClose}
             disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            className="text-warm-muted hover:text-warm-black disabled:opacity-50"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -113,7 +114,7 @@ export default function EditApiKeyModal({
         </div>
 
         {/* Description */}
-        <p className="text-sm text-gray-500 mb-4">{providerDescriptions[provider]}</p>
+        <p className="text-sm text-warm-muted mb-4">{providerDescriptions[provider]}</p>
 
         {/* Inline Error */}
         {inlineError && (
@@ -128,7 +129,7 @@ export default function EditApiKeyModal({
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="apiKey" className="block text-sm font-medium text-warm-black mb-1">
               API Key
             </label>
             <input
@@ -138,9 +139,9 @@ export default function EditApiKeyModal({
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Enter your API key"
               disabled={isLoading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent disabled:bg-warm-offwhite disabled:cursor-not-allowed"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-warm-muted">
               Leave empty to clear the current key
             </p>
           </div>
@@ -151,7 +152,7 @@ export default function EditApiKeyModal({
               type="button"
               onClick={handleClose}
               disabled={isLoading}
-              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 border border-warm-gray text-warm-black rounded-lg hover:bg-warm-offwhite font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -160,29 +161,8 @@ export default function EditApiKeyModal({
               disabled={isLoading}
               className="flex-1 px-4 py-2 bg-sage text-white rounded-lg hover:bg-sage/80 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Validating...
-                </>
-              ) : (
-                'Save'
-              )}
+              {isLoading && <ButtonSpinner />}
+              {isLoading ? 'Validating...' : 'Save'}
             </button>
           </div>
         </form>

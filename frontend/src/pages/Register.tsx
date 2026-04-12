@@ -2,6 +2,7 @@ import { useState, FormEvent, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import api from '../lib/api'
+import ButtonSpinner from '../components/ButtonSpinner'
 
 const Register = () => {
   const [username, setUsername] = useState('')
@@ -107,10 +108,10 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sage-tint via-pink-50 to-blue-100 p-4">
       <div className="bg-white rounded-3xl shadow-lg p-12 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">
+        <h1 className="text-2xl font-bold text-warm-black mb-2 text-center">
           Create your account
         </h1>
-        <p className="text-gray-600 mb-8 text-center">
+        <p className="text-warm-muted mb-8 text-center">
           Start your Mandarin learning journey
         </p>
 
@@ -122,7 +123,7 @@ const Register = () => {
           )}
 
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="username" className="block text-sm font-medium text-warm-black mb-1">
               Username
             </label>
             <input
@@ -132,13 +133,13 @@ const Register = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+              className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Choose a username"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-warm-black mb-1">
               Email
             </label>
             <input
@@ -148,13 +149,13 @@ const Register = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+              className="w-full px-4 py-3 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               placeholder="Enter your email"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-warm-black mb-1">
               Password
             </label>
             <input
@@ -168,7 +169,7 @@ const Register = () => {
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent ${
                 passwordError
                   ? 'border-red-500 bg-red-50'
-                  : 'border-gray-300'
+                  : 'border-warm-gray'
               }`}
               placeholder="Create a password"
               aria-invalid={passwordError ? 'true' : 'false'}
@@ -179,14 +180,14 @@ const Register = () => {
                 {passwordError}
               </p>
             ) : (
-              <p id="password-help" className="mt-1 text-sm text-gray-500">
+              <p id="password-help" className="mt-1 text-sm text-warm-muted">
                 Must be at least 8 characters with uppercase, lowercase, and number
               </p>
             )}
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-warm-black mb-1">
               Confirm Password
             </label>
             <input
@@ -200,7 +201,7 @@ const Register = () => {
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent ${
                 confirmPasswordError
                   ? 'border-red-500 bg-red-50'
-                  : 'border-gray-300'
+                  : 'border-warm-gray'
               }`}
               placeholder="Confirm your password"
               aria-invalid={confirmPasswordError ? 'true' : 'false'}
@@ -218,11 +219,14 @@ const Register = () => {
             disabled={isSubmitting}
             className="w-full bg-sage hover:bg-sage/80 text-white font-semibold py-4 px-8 rounded-full transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Creating account...' : 'Register'}
+            <span className="flex items-center justify-center gap-2">
+              {isSubmitting && <ButtonSpinner />}
+              {isSubmitting ? 'Creating account...' : 'Register'}
+            </span>
           </button>
         </form>
 
-        <p className="text-center mt-6 text-gray-600">
+        <p className="text-center mt-6 text-warm-muted">
           Already have an account?{' '}
           <Link to="/login" className="text-sage hover:text-sage/80 font-medium">
             Log in

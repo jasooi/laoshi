@@ -349,9 +349,9 @@ function WordsTable({
     if (sortBy === 'pinyin' && sortOrder === 'asc') {
       setSortOrder('desc')
     } else if (sortBy === 'pinyin' && sortOrder === 'desc') {
-      setSortBy('word')
+      setSortBy('meaning')
       setSortOrder('asc')
-    } else if (sortBy === 'word' && sortOrder === 'asc') {
+    } else if (sortBy === 'meaning' && sortOrder === 'asc') {
       setSortOrder('desc')
     } else {
       setSortBy('pinyin')
@@ -360,7 +360,7 @@ function WordsTable({
   }
 
   const getSortLabel = () => {
-    const col = sortBy === 'pinyin' ? 'Pinyin' : 'Word'
+    const col = sortBy === 'pinyin' ? 'Pinyin' : 'Meaning'
     const dir = sortOrder === 'asc' ? '↑' : '↓'
     return `Sort by ${col} ${dir}`
   }

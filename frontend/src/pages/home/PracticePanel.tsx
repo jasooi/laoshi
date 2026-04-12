@@ -10,6 +10,56 @@ import { Send, ChevronsRight, ChevronLeft, AlertTriangle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import laoshiLogo from '../../assets/laoshi-logo.png'
 
+// Parse inline bold (**text**) within a line
+function renderInline(text: string, keyPrefix: number): React.ReactNode[] {
+  const parts: React.ReactNode[] = []
+  const regex = /\*\*(.+?)\*\*/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index))
+    }
+    parts.push(<strong key={`${keyPrefix}-${match.index}`}>{match[1]}</strong>)
+    lastIndex = match.index + match[0].length
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+  return parts
+}
+
+// Renders markdown: **bold** and bullet lists (* item)
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split('\n')
+  const result: React.ReactNode[] = []
+  let i = 0
+
+  while (i < lines.length) {
+    // Collect consecutive bullet lines into a list
+    if (/^\s*\*\s/.test(lines[i])) {
+      const items: React.ReactNode[] = []
+      while (i < lines.length && /^\s*\*\s/.test(lines[i])) {
+        const content = lines[i].replace(/^\s*\*\s/, '')
+        items.push(<li key={i}>{renderInline(content, i)}</li>)
+        i++
+      }
+      result.push(
+        <ul key={`ul-${i}`} className="list-disc list-inside my-1 space-y-0.5">
+          {items}
+        </ul>
+      )
+    } else {
+      // Regular line — render inline bold
+      if (result.length > 0) result.push('\n')
+      result.push(<span key={i}>{renderInline(lines[i], i)}</span>)
+      i++
+    }
+  }
+  return result
+}
+
 const RATE_LIMIT_MESSAGE = "Laoshi needs a breather — the AI rate limit has been reached. You can add your own API key in Settings to avoid this."
 
 function isRateLimitError(error: unknown): boolean {
@@ -72,7 +122,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div className="max-w-[75%]">
         <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-warm-gray/40 shadow-sm">
           <p className="text-[15px] text-warm-black leading-relaxed whitespace-pre-wrap">
-            {message.content}
+            {renderMarkdown(message.content)}
           </p>
         </div>
         {message.feedback && (
@@ -514,7 +564,7 @@ export default function PracticePanel() {
                   disabled={status !== 'feedback_given'}
                   className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                     status === 'feedback_given'
-                      ? 'text-warm-black/50 hover:text-warm-black'
+                      ? 'text-sage hover:text-sage-dark'
                       : 'text-warm-black/30 cursor-not-allowed'
                   }`}
                 >

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { settingsApi } from '../lib/api'
 import type { UserSettings } from '../types/api'
+import { Info } from 'lucide-react'
 import EditApiKeyModal from './settings/EditApiKeyModal'
 
 const Settings = () => {
@@ -11,7 +12,6 @@ const Settings = () => {
 
   // Modal states
   const [activeModal, setActiveModal] = useState<'deepseek' | 'gemini' | null>(null)
-
   // Form states
   const [preferredName, setPreferredName] = useState('')
   const [wordsPerSession, setWordsPerSession] = useState<number>(5)
@@ -100,7 +100,7 @@ const Settings = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <h1 className="text-3xl font-semibold text-gray-900">Settings</h1>
+          <h1 className="text-2xl font-bold text-warm-black">Settings</h1>
         </div>
       </div>
 
@@ -133,19 +133,19 @@ const Settings = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Profile Settings */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-warm-gray p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-sage-tint flex items-center justify-center">
               <svg className="w-5 h-5 text-sage" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
+            <h2 className="text-xl font-semibold text-warm-black">Profile</h2>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <label htmlFor="preferredName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="preferredName" className="block text-sm font-medium text-warm-black mb-2">
                 Preferred Name
               </label>
               <input
@@ -154,19 +154,19 @@ const Settings = () => {
                 value={preferredName}
                 onChange={(e) => setPreferredName(e.target.value)}
                 placeholder="How should we address you?"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+                className="w-full px-3 py-2 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               />
             </div>
 
             <div>
-              <label htmlFor="wordsPerSession" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="wordsPerSession" className="block text-sm font-medium text-warm-black mb-2">
                 Words per Session
               </label>
               <select
                 id="wordsPerSession"
                 value={wordsPerSession}
                 onChange={(e) => setWordsPerSession(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
+                className="w-full px-3 py-2 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
               >
                 <option value={3}>3 words</option>
                 <option value={5}>5 words</option>
@@ -174,12 +174,11 @@ const Settings = () => {
                 <option value={15}>15 words</option>
                 <option value={20}>20 words</option>
               </select>
-              <p className="mt-1 text-xs text-gray-500">Number of words to practice in each session</p>
             </div>
 
             <button
               onClick={handleSaveProfile}
-              className="w-full mt-4 px-4 py-2 bg-sage text-white rounded-lg hover:bg-sage/80 font-medium transition-colors"
+              className="w-full mt-2 px-4 py-2 bg-sage text-white rounded-lg hover:bg-sage/80 font-medium transition-colors"
             >
               Save Profile Settings
             </button>
@@ -187,23 +186,37 @@ const Settings = () => {
         </div>
 
         {/* API Keys */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-warm-gray p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
               <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">API Keys</h2>
+            <h2 className="text-xl font-semibold text-warm-black">API Keys</h2>
           </div>
 
           <div className="space-y-6">
             {/* DeepSeek Key */}
-            <div className="border border-gray-200 rounded-xl p-4">
+            <div className="border border-warm-gray rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="font-medium text-gray-900">DeepSeek</h3>
-                  <p className="text-sm text-gray-500">Conversation and feedback generation</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-medium text-warm-black">DeepSeek</h3>
+                    <div className="relative group">
+                      <Info className="w-4 h-4 text-warm-muted group-hover:text-warm-black transition-colors cursor-help" />
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full hidden group-hover:block z-10 pb-2">
+                        <div className="bg-warm-black text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                          Get a DeepSeek API key:{' '}
+                          <a href="https://developer.puter.com/tutorials/how-to-get-deepseek-api-key/" target="_blank" rel="noopener noreferrer" className="text-sage-tint underline">
+                            Follow this guide
+                          </a>
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full -mt-2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-warm-black" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-warm-muted">Conversation and feedback generation</p>
                 </div>
                 <button
                   onClick={() => setActiveModal('deepseek')}
@@ -212,17 +225,31 @@ const Settings = () => {
                   Edit
                 </button>
               </div>
-              <div className="text-sm font-mono text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+              <div className="text-sm font-mono text-warm-muted bg-warm-offwhite px-3 py-2 rounded-lg">
                 {maskApiKey(settings?.deepseek_api_key || null)}
               </div>
             </div>
 
             {/* Gemini Key */}
-            <div className="border border-gray-200 rounded-xl p-4">
+            <div className="border border-warm-gray rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="font-medium text-gray-900">Gemini</h3>
-                  <p className="text-sm text-gray-500">Sentence evaluation and scoring</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-medium text-warm-black">Gemini</h3>
+                    <div className="relative group">
+                      <Info className="w-4 h-4 text-warm-muted group-hover:text-warm-black transition-colors cursor-help" />
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full hidden group-hover:block z-10 pb-2">
+                        <div className="bg-warm-black text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                          Get a Gemini API key:{' '}
+                          <a href="https://ai.google.dev/gemini-api/docs/api-key" target="_blank" rel="noopener noreferrer" className="text-sage-tint underline">
+                            Follow this guide
+                          </a>
+                          <div className="absolute left-1/2 -translate-x-1/2 top-full -mt-2 w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-warm-black" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-warm-muted">Sentence evaluation and scoring</p>
                 </div>
                 <button
                   onClick={() => setActiveModal('gemini')}
@@ -231,12 +258,12 @@ const Settings = () => {
                   Edit
                 </button>
               </div>
-              <div className="text-sm font-mono text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+              <div className="text-sm font-mono text-warm-muted bg-warm-offwhite px-3 py-2 rounded-lg">
                 {maskApiKey(settings?.gemini_api_key || null)}
               </div>
             </div>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-warm-muted">
               Your API keys are encrypted and stored securely. They are only used for your practice sessions.
             </p>
           </div>

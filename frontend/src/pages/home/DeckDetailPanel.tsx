@@ -6,6 +6,7 @@ import { deckApi, practiceApi } from '../../lib/api'
 import type { DeckWithStats } from '../../types/api'
 import { useHome } from './HomeContext'
 import { Play, ArrowRight } from 'lucide-react'
+import ButtonSpinner from '../../components/ButtonSpinner'
 
 // Format time ago for "Last practiced" pill
 function formatTimeAgo(dateString: string | null): string {
@@ -152,7 +153,7 @@ export default function DeckDetailPanel() {
 
   const masteredCount = deck.mastered_count || 0
   const wordCount = deck.word_count || 0
-  const practicedCount = wordCount - masteredCount
+  const practicedCount = deck.practiced_count || 0
 
   return (
     <div className="flex-1 h-full flex flex-col items-center justify-center bg-warm-offwhite p-8 relative overflow-hidden">
@@ -180,7 +181,7 @@ export default function DeckDetailPanel() {
             </span>
 
             {/* Deck name (serif) */}
-            <h1 className="font-serif text-4xl text-warm-black mb-6">{deck.name}</h1>
+            <h1 className="text-2xl font-bold text-warm-black mb-6">{deck.name}</h1>
 
             {/* 3-column stats */}
             <div className="grid grid-cols-3 gap-6 mb-6">
@@ -214,7 +215,7 @@ export default function DeckDetailPanel() {
                 disabled={startingPractice || wordCount === 0}
                 className="flex items-center gap-2 bg-sage hover:bg-sage/90 text-white px-8 py-4 rounded-xl text-lg font-medium disabled:bg-warm-gray disabled:cursor-not-allowed transition-colors"
               >
-                <Play className="w-5 h-5" />
+                {startingPractice ? <ButtonSpinner className="h-5 w-5" /> : <Play className="w-5 h-5" />}
                 {startingPractice ? 'Starting...' : 'Start Practice'}
               </button>
 

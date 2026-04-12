@@ -12,7 +12,7 @@ function getScoreColor(score: number): string {
 
 export function FeedbackCard({ feedback }: FeedbackCardProps) {
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm space-y-4">
+    <div className="bg-white border border-warm-gray rounded-xl p-4 shadow-sm space-y-4">
       {/* Score badges */}
       <div className="flex flex-wrap gap-3">
         <div className={`px-3 py-2 rounded-lg border ${getScoreColor(feedback.grammarScore)}`}>
@@ -45,13 +45,13 @@ export function FeedbackCard({ feedback }: FeedbackCardProps) {
       </div>
 
       {/* Feedback text */}
-      <p className="text-gray-700 leading-relaxed">{feedback.feedback}</p>
+      <p className="text-warm-black leading-relaxed">{feedback.feedback}</p>
 
       {/* Corrections */}
       {feedback.corrections && feedback.corrections.length > 0 && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-2">Corrections:</h4>
-          <ul className="list-disc list-inside space-y-1 text-gray-700">
+          <h4 className="font-semibold text-warm-black mb-2">Corrections:</h4>
+          <ul className="list-disc list-inside space-y-1 text-warm-black">
             {feedback.corrections.map((correction, idx) => (
               <li key={idx}>{correction}</li>
             ))}
@@ -62,8 +62,8 @@ export function FeedbackCard({ feedback }: FeedbackCardProps) {
       {/* Explanations */}
       {feedback.explanations && feedback.explanations.length > 0 && (
         <div>
-          <h4 className="font-semibold text-gray-900 mb-2">Explanations:</h4>
-          <ul className="list-disc list-inside space-y-1 text-gray-700">
+          <h4 className="font-semibold text-warm-black mb-2">Explanations:</h4>
+          <ul className="list-disc list-inside space-y-1 text-warm-black">
             {feedback.explanations.map((explanation, idx) => (
               <li key={idx}>{explanation}</li>
             ))}

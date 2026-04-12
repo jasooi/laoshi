@@ -40,6 +40,13 @@ def compute_deck_stats(deck_id):
         .scalar_subquery()
     )
 
+    # Practiced count subquery (words that have been reviewed at least once)
+    practiced_count_sq = (
+        select(func.count(Word.id))
+        .where(Word.deck_id == deck_id, Word.last_quality.isnot(None))
+        .scalar_subquery()
+    )
+
     # Last practiced at subquery (from UserSession)
     from models import UserSession
     last_practiced_sq = (
@@ -53,17 +60,20 @@ def compute_deck_stats(deck_id):
         select(
             word_count_sq.label('word_count'),
             mastered_count_sq.label('mastered_count'),
+            practiced_count_sq.label('practiced_count'),
             last_practiced_sq.label('last_practiced_at')
         )
     ).first()
 
     word_count = result.word_count or 0
     mastered_count = result.mastered_count or 0
+    practiced_count = result.practiced_count or 0
     mastery_percentage = round((mastered_count / word_count) * 100) if word_count > 0 else 0
 
     return {
         'word_count': word_count,
         'mastered_count': mastered_count,
+        'practiced_count': practiced_count,
         'mastery_percentage': mastery_percentage,
         'last_practiced_at': result.last_practiced_at.isoformat() if result.last_practiced_at else None,
     }

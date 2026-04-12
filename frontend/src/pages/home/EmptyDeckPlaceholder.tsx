@@ -15,12 +15,12 @@ export default function EmptyDeckPlaceholder() {
         />
 
         {/* Conditional title */}
-        <h2 className="text-[29px] font-bold text-warm-black mb-2">
+        <h2 className="text-2xl font-bold text-warm-black mb-2">
           {deckCount === 0 ? '\u{1F448} Add a deck to begin' : '\u{1F448} Select a deck to begin'}
         </h2>
 
         {/* Subtitle */}
-        <p className="text-[21px] text-warm-muted">
+        <p className="text-lg text-warm-muted">
           Laoshi is waiting for you in the classroom.
         </p>
       </div>

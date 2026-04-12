@@ -74,6 +74,18 @@ export function HomeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Listen for session ended externally (e.g. Sidebar navigation guard)
+  useEffect(() => {
+    const handleSessionEnded = () => {
+      setActiveSessionData(null)
+      setSummaryData(null)
+      clearSession()
+      setViewState('home')
+    }
+    window.addEventListener('laoshi_session_ended', handleSessionEnded)
+    return () => window.removeEventListener('laoshi_session_ended', handleSessionEnded)
+  }, [])
+
   const selectDeck = useCallback((deckId: number) => {
     setSelectedDeckId(deckId)
   }, [])

@@ -10,7 +10,7 @@ const Layout = ({ children }: LayoutProps) => {
   const location = useLocation()
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-warm-offwhite">
       {/* Sidebar */}
       <Sidebar currentPath={location.pathname} />
 
