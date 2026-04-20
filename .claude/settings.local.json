@@ -30,7 +30,9 @@
       "Bash(npm install:*)",
       "Bash(npx vite build:*)",
       "Bash(pushd:*)",
-      "Bash(flask db:*)"
+      "Bash(flask db:*)",
+      "Bash(pip show:*)",
+      "Bash(pip install:*)"
     ]
   },
   "enabledPlugins": {

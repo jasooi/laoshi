@@ -70,13 +70,7 @@ export default function EditApiKeyModal({
         return
       }
 
-      // Validation passed - save the key
-      await settingsApi.updateSettings({
-        [`${provider}_api_key`]: apiKey.trim(),
-      } as Partial<{
-        deepseek_api_key: string | null
-        gemini_api_key: string | null
-      }>)
+      // Validation passed — backend already saved the key
       onKeySaved(apiKey.trim())
       onClose()
     } catch (err) {

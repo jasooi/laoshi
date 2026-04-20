@@ -297,6 +297,20 @@ class UserListResource(Resource):
             logger.exception("Error creating user")
             return {"error": "An internal error occurred"}, 500
 
+        # Seed sample deck for the new user
+        try:
+            from sample_deck_service import seed_sample_deck_for_user
+            seed_sample_deck_for_user(user_to_add.id)
+        except Exception:
+            logger.exception("Failed to seed sample deck, continuing registration")
+
+        # Send welcome email (non-blocking — failure doesn't affect registration)
+        try:
+            from email_service import send_welcome_email
+            send_welcome_email(email, username)
+        except Exception:
+            logger.exception("Failed to send welcome email, continuing registration")
+
         return {"created_data": user_to_add.format_data()}, HTTPStatus.CREATED
     
 

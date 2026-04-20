@@ -7,6 +7,7 @@ import { FeedbackCard } from '../../components/FeedbackCard'
 import FloatingWordPill from './FloatingWordPill'
 import ConfidenceRating from './ConfidenceRating'
 import { Send, ChevronsRight, ChevronLeft, AlertTriangle } from 'lucide-react'
+import ButtonSpinner from '../../components/ButtonSpinner'
 import { motion } from 'framer-motion'
 import laoshiLogo from '../../assets/laoshi-logo.png'
 
@@ -121,9 +122,9 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       )}
       <div className="max-w-[75%]">
         <div className="bg-white rounded-2xl rounded-tl-sm px-4 py-3 border border-warm-gray/40 shadow-sm">
-          <p className="text-[15px] text-warm-black leading-relaxed whitespace-pre-wrap">
+          <div className="text-[15px] text-warm-black leading-relaxed whitespace-pre-wrap">
             {renderMarkdown(message.content)}
-          </p>
+          </div>
         </div>
         {message.feedback && (
           <div className="mt-2">
@@ -152,6 +153,7 @@ export default function PracticePanel() {
   const [status, setStatus] = useState<PracticeStatus>('ai_typing')
   const [sessionStats, setSessionStats] = useState({ words_practiced: 0, words_total: 0 })
   const [showEndModal, setShowEndModal] = useState(false)
+  const [endingSession, setEndingSession] = useState(false)
   const [showDivider, setShowDivider] = useState(false)
 
   const chatEndRef = useRef<HTMLDivElement>(null)
@@ -361,11 +363,14 @@ export default function PracticePanel() {
 
   const handleEndSession = async () => {
     if (!session) return
+    setEndingSession(true)
     try {
       await practiceApi.endSession(session.id)
     } catch (error) {
       console.error('Failed to end session:', error)
     } finally {
+      setEndingSession(false)
+      setShowEndModal(false)
       endPractice()
     }
   }
@@ -561,11 +566,13 @@ export default function PracticePanel() {
               <div className="bg-white border-t border-warm-gray/50 px-4 py-2.5 flex items-center justify-between">
                 <button
                   onClick={handleNextWord}
-                  disabled={status !== 'feedback_given'}
+                  disabled={status !== 'waiting_for_user' && status !== 'feedback_given'}
                   className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
                     status === 'feedback_given'
                       ? 'text-sage hover:text-sage-dark'
-                      : 'text-warm-black/30 cursor-not-allowed'
+                      : status === 'waiting_for_user'
+                        ? 'text-warm-black/50 hover:text-warm-black'
+                        : 'text-warm-black/30 cursor-not-allowed'
                   }`}
                 >
                   <ChevronsRight className="w-4 h-4" />
@@ -610,15 +617,18 @@ export default function PracticePanel() {
             <div className="flex gap-4 justify-end">
               <button
                 onClick={() => setShowEndModal(false)}
-                className="px-6 py-2.5 text-warm-black/60 hover:text-warm-black font-medium transition-colors"
+                disabled={endingSession}
+                className="px-6 py-2.5 text-warm-black/60 hover:text-warm-black font-medium transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
-                onClick={() => { setShowEndModal(false); handleEndSession() }}
-                className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-sm font-medium transition-colors"
+                onClick={handleEndSession}
+                disabled={endingSession}
+                className="flex items-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl shadow-sm font-medium transition-colors disabled:opacity-50"
               >
-                End Session
+                {endingSession && <ButtonSpinner />}
+                {endingSession ? 'Ending...' : 'End Session'}
               </button>
             </div>
           </motion.div>

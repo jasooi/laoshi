@@ -750,3 +750,30 @@ class TokenBlocklist(db.Model):
     def is_blocklisted(cls, jti: str) -> bool:
         return cls.query.filter_by(jti=jti).first() is not None
 
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_token'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    created_ds = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    expires_ds = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False, nullable=False)
+
+    user = db.relationship('User')
+
+    def is_expired(self):
+        return datetime.utcnow() > self.expires_ds
+
+    def is_valid(self):
+        return not self.used and not self.is_expired()
+
+    def add(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
+

@@ -91,11 +91,11 @@ Your summary MUST include:
 2. Two specific areas for improvement -- reference an actual recurring mistake or weakness.
 
 Rules:
+- Write concisely in point form, 3 points maximum.
 - Be specific: cite Chinese words or phrases the student used. Do not speak in generalities.
 - Be encouraging but honest.
 - Do not repeat evaluation data verbatim; synthesise into natural teacher feedback.
-- Write in plain prose (no bullet points or headings), as if speaking directly to the student.
-- Write in concise point form: 3-5 points maximum.
+
 
 Addition to memory:
 Also recommend any updates to long-term memory about this student's learning patterns, including common mistakes and recurring errors you observed in this session. 

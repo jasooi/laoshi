@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { settingsApi } from '../lib/api'
 import type { UserSettings } from '../types/api'
-import { Info } from 'lucide-react'
+import { Info, AlertTriangle } from 'lucide-react'
 import EditApiKeyModal from './settings/EditApiKeyModal'
+import DeleteAccountModal from './settings/DeleteAccountModal'
 
 const Settings = () => {
   const [settings, setSettings] = useState<UserSettings | null>(null)
@@ -12,6 +13,7 @@ const Settings = () => {
 
   // Modal states
   const [activeModal, setActiveModal] = useState<'deepseek' | 'gemini' | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   // Form states
   const [preferredName, setPreferredName] = useState('')
   const [wordsPerSession, setWordsPerSession] = useState<number>(5)
@@ -270,7 +272,32 @@ const Settings = () => {
         </div>
       </div>
 
+      {/* Danger Zone */}
+      <div className="mt-8 bg-white rounded-2xl shadow-sm border border-red-200 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-warm-black">Danger Zone</h2>
+        </div>
+        <p className="text-sm text-warm-muted mb-4">
+          Once you delete your account, all of your data will be permanently removed. This action cannot be undone.
+        </p>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
+        >
+          <AlertTriangle className="w-4 h-4" />
+          Delete Account
+        </button>
+      </div>
+
       {/* Modals */}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      />
+
       <EditApiKeyModal
         isOpen={activeModal === 'deepseek'}
         onClose={() => setActiveModal(null)}

@@ -15,6 +15,8 @@ from practice_resources import PracticeSessionResource, PracticeSessionDetailRes
 from progress_resources import ProgressStatsResource
 from settings_resources import UserSettingsResource, UserSettingsKeyResource, UserSettingsKeyValidateResource
 from report_card_resources import ReportCardResource, GenerateFeedbackResource, StreakResource
+from password_reset_resources import PasswordResetRequestResource, PasswordResetResource
+from account_resources import AccountDeleteResource
 from deck_resources import deck_bp
 from models import TokenBlocklist
 from config import Config
@@ -77,6 +79,13 @@ def register_resources(app):
     api.add_resource(ReportCardResource, '/progress/report-card')
     api.add_resource(GenerateFeedbackResource, '/progress/generate-feedback')
     api.add_resource(StreakResource, '/progress/streak')
+
+    # Password reset endpoints (public)
+    api.add_resource(PasswordResetRequestResource, '/password-reset/request')
+    api.add_resource(PasswordResetResource, '/password-reset/reset')
+
+    # Account management
+    api.add_resource(AccountDeleteResource, '/account')
 
 def create_app(config_class=None):
     app = Flask(__name__)

@@ -492,6 +492,16 @@ def handle_message(session_id: int, user_id: int, message: str):
 
     laoshi_response = result.final_output if hasattr(result, 'final_output') else str(result)
 
+    # Debug: log all items from the agent run to diagnose tool call failures
+    from agents.items import ToolCallItem, ToolCallOutputItem
+    for item in result.new_items:
+        if isinstance(item, ToolCallItem):
+            logger.info(f"[DIAG] Tool called: {item.name} | input: {str(item.arguments)[:200]}")
+        elif isinstance(item, ToolCallOutputItem):
+            logger.info(f"[DIAG] Tool output: {str(item.output)[:500]}")
+        else:
+            logger.info(f"[DIAG] Item type: {type(item).__name__} | {str(item)[:200]}")
+
     # Defensive score extraction
     feedback = extract_feedback_from_result(result)
     feedback_response = None
@@ -686,10 +696,10 @@ def complete_session(session_id: int, user_id: int):
                         pass  # mem0 write failure shouldn't block session close
 
     except Exception:
+        summary_data = None
         summary_text = "Session completed. Keep practicing!"
 
-    # Extract deck_oneliner from summary JSON and update deck
-    summary_data = _parse_json_from_string(summary_text)
+    # Extract deck_oneliner from the ORIGINAL parsed JSON (before summary_text was overwritten)
     if summary_data and 'deck_oneliner' in summary_data:
         deck_id = session.deck_id
         if deck_id:
