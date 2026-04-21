@@ -307,7 +307,7 @@ class UserListResource(Resource):
         # Send welcome email (non-blocking — failure doesn't affect registration)
         try:
             from email_service import send_welcome_email
-            send_welcome_email(email, username)
+            send_welcome_email(email, username, username)
         except Exception:
             logger.exception("Failed to send welcome email, continuing registration")
 

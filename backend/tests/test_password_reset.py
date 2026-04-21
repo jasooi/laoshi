@@ -1,7 +1,7 @@
 """Tests for password reset flow."""
 import pytest
 from unittest.mock import patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from models import User, PasswordResetToken
 from utils import hash_password, check_password
@@ -13,7 +13,7 @@ def user(db):
         username='resetuser',
         email='reset@example.com',
         password=hash_password('OldPassword1'),
-        created_ds=datetime.utcnow(),
+        created_ds=datetime.now(timezone.utc),
     )
     user.add()
     return user
@@ -51,7 +51,8 @@ class TestPasswordResetRequest:
         tokens = PasswordResetToken.query.filter_by(user_id=user.id).all()
         assert len(tokens) == 1
         assert tokens[0].used is False
-        assert tokens[0].expires_ds > datetime.utcnow()
+        expires = tokens[0].expires_ds if tokens[0].expires_ds.tzinfo else tokens[0].expires_ds.replace(tzinfo=timezone.utc)
+        assert expires > datetime.now(timezone.utc)
 
     @patch('password_reset_resources.send_password_reset_email', return_value=True)
     def test_invalidates_old_tokens_on_new_request(self, mock_email, client, user, db):
@@ -88,7 +89,7 @@ class TestPasswordReset:
         token = PasswordResetToken(
             user_id=user.id,
             token_hash=hashlib.sha256(raw.encode()).hexdigest(),
-            expires_ds=datetime.utcnow() + timedelta(hours=1),
+            expires_ds=datetime.now(timezone.utc) + timedelta(hours=1),
         )
         token.add()
         return raw
@@ -134,7 +135,7 @@ class TestPasswordReset:
         token = PasswordResetToken(
             user_id=user.id,
             token_hash=hashlib.sha256(raw.encode()).hexdigest(),
-            expires_ds=datetime.utcnow() - timedelta(hours=1),  # expired
+            expires_ds=datetime.now(timezone.utc) - timedelta(hours=1),  # expired
         )
         token.add()
 

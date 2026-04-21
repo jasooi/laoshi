@@ -1,6 +1,6 @@
 """Tests for account deletion."""
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask_jwt_extended import create_access_token
 
@@ -15,7 +15,7 @@ def user_with_data(db):
         username='deleteuser',
         email='delete@example.com',
         password=hash_password('TestPassword1'),
-        created_ds=datetime.utcnow(),
+        created_ds=datetime.now(timezone.utc),
     )
     user.add()
 
@@ -34,7 +34,7 @@ def user_with_data(db):
     session = UserSession(
         user_id=user.id,
         deck_id=deck.id,
-        session_start_ds=datetime.utcnow(),
+        session_start_ds=datetime.now(timezone.utc),
         words_per_session=1,
     )
     session.add()
@@ -42,7 +42,7 @@ def user_with_data(db):
     sw = SessionWord(
         word_id=word.id,
         session_id=session.id,
-        session_word_load_ds=datetime.utcnow(),
+        session_word_load_ds=datetime.now(timezone.utc),
         word_order=0,
     )
     sw.add()

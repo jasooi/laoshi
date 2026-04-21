@@ -3,7 +3,7 @@
 import hashlib
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import request
 from flask_restful import Resource
@@ -56,13 +56,14 @@ class PasswordResetRequestResource(Resource):
         reset_token = PasswordResetToken(
             user_id=user.id,
             token_hash=token_hash,
-            expires_ds=datetime.utcnow() + timedelta(hours=TOKEN_EXPIRY_HOURS),
+            expires_ds=datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS),
         )
         reset_token.add()
 
         # Send reset email (non-blocking)
         try:
-            send_password_reset_email(user.email, raw_token)
+            first_name = (user.profile.preferred_name if user.profile else None) or user.username
+            send_password_reset_email(user.email, first_name, raw_token)
         except Exception:
             logger.exception("Failed to send password reset email")
 

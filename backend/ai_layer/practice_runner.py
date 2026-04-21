@@ -5,7 +5,7 @@ import logging
 import os
 import random
 import math
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from statistics import mean
 
 from agents import Runner
@@ -400,7 +400,7 @@ def initialize_session(user_id: int, deck_id: int, words_count: int | None = Non
 
     # Create session
     session = UserSession(
-        session_start_ds=datetime.utcnow(),
+        session_start_ds=datetime.now(timezone.utc),
         user_id=user_id,
         deck_id=deck_id,
         words_per_session=actual_count,
@@ -412,7 +412,7 @@ def initialize_session(user_id: int, deck_id: int, words_count: int | None = Non
         sw = SessionWord(
             word_id=word.id,
             session_id=session.id,
-            session_word_load_ds=datetime.utcnow(),
+            session_word_load_ds=datetime.now(timezone.utc),
             word_order=i,
         )
         sw.add()
@@ -721,7 +721,7 @@ def complete_session(session_id: int, user_id: int):
 
     # Close session
     session.summary_text = summary_text
-    session.session_end_ds = datetime.utcnow()
+    session.session_end_ds = datetime.now(timezone.utc)
     session.update()
 
     # Build word results

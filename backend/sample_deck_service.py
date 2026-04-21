@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 SAMPLE_DECK_NAME = "Software Engineering Vocabulary"
 SAMPLE_DECK_DESCRIPTION = "Common Mandarin vocabulary used in software engineering contexts."
+SAMPLE_DECK_LAOSHI_MESSAGE = "This is a sample deck to help you get started with Laoshi! You can delete or modify this deck as you please."
 
 
 def get_sample_csv_path():
@@ -59,6 +60,7 @@ def seed_sample_deck_for_user(user_id):
         deck = Deck(
             name=SAMPLE_DECK_NAME,
             description=SAMPLE_DECK_DESCRIPTION,
+            laoshi_message=SAMPLE_DECK_LAOSHI_MESSAGE,
             user_id=user_id,
         )
         db.session.add(deck)

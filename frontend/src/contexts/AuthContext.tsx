@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setUser(null)
     setAccessToken(null)
+    localStorage.removeItem('laoshi_active_session')
   }, [])
 
   // Register the refresh failure callback with the Axios interceptor
