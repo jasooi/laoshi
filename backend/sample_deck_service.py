@@ -15,14 +15,19 @@ SAMPLE_DECK_LAOSHI_MESSAGE = "This is a sample deck to help you get started with
 def get_sample_csv_path():
     """Return absolute path to the sample CSV file."""
     backend_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(backend_dir, '..', 'sample_decks', 'swe_vocab_list.csv')
+    csv_path = os.path.join(backend_dir, '..', 'sample_decks', 'swe_vocab_list.csv')
+    normalized_path = os.path.normpath(csv_path)
+    logger.info(f"Sample CSV path: backend_dir={backend_dir}, csv_path={normalized_path}")
+    return normalized_path
 
 
 def load_sample_words_from_csv():
     """Parse the sample CSV and return list of {word, pinyin, meaning} dicts."""
     csv_path = get_sample_csv_path()
     if not os.path.exists(csv_path):
-        logger.warning(f"Sample CSV not found at {csv_path}")
+        logger.error(f"Sample CSV not found at {csv_path} - seeding will be skipped!")
+        logger.error(f"Current working directory: {os.getcwd()}")
+        logger.error(f"Files in parent dir: {os.listdir(os.path.dirname(csv_path)) if os.path.exists(os.path.dirname(csv_path)) else 'parent dir does not exist'}")
         return []
 
     words = []
@@ -54,7 +59,7 @@ def seed_sample_deck_for_user(user_id):
     try:
         words_data = load_sample_words_from_csv()
         if not words_data:
-            logger.warning("No words loaded from sample CSV, skipping seed.")
+            logger.error(f"No words loaded from sample CSV for user {user_id}, skipping seed. Check if sample_decks/swe_vocab_list.csv exists in deployment.")
             return None
 
         deck = Deck(
