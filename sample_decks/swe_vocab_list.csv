@@ -1,0 +1,130 @@
+Word,Pinyin,Meaning
+文档,Wéndàng,documentation
+服务,Fúwù,service
+架构,Jiàgòu,architecture
+注册,Zhùcè,register
+设计,Shèjì,design
+版本,Bǎnběn,version
+集群,Jíqún,cluster
+数据,Shùjù,data
+同步,Tóngbù,synchronize
+配置中心,Pèizhìzhōngxīn,configuration centre
+主从,Zhǔcóng,master-slave
+信息,Xìnxī,information
+模式,Móshì,model
+生产(者),Shēngchǎn(zhě),produce(r)
+消费(者),Xiāofèi(zhě),consumer(r)
+详解,Xiángjiě,to explain in detail
+逻辑,Luójí,logic
+处理,Chǔlǐ,to handle ~[something]
+流量,Liúliàng,flow/traffic
+启动,Qǐdòng,startup
+部署,Bùshǔ,deploy
+会抛,Huìpāo,[something]~ will throw [error]
+设置,Shèzhì,setup
+捕获(异常),Bǔhuò(yìcháng),catch (exception)
+抛出(异常),Pāochū(yìcháng),throw (exception)
+挂掉,Guàdiào,to drop ~[something]
+故障,Gùzhàng,"bug, i.e. software bug"
+容灾操作步骤,Róngzāicāozuòbùzhòu,disaster recovery steps
+带宽,Dàikuān,bandwidth
+离线,Líxiàn,offline
+演练,Yǎnliàn,walkthrough
+单纯,Dānchún,simply
+订阅,Dìngyuè,subscription
+负载均衡,Fùzǎijūnhéng,load balancing
+均衡分配,Jūnhéngfēnpèi,balanced distribution
+宕机,Dàngjī,downtime
+优雅关闭,Yōuyǎguānbì,graceful shutdown
+组协调者,Zǔxiétiáozhě,group coordinator
+查询,Cháxún,inquiry
+具体原因分析,Jùtǐyuányīnfēnxī,root cause analysis
+排查思路,Páichásīlù,troubleshooting ideas
+接口,Jiēkǒu,interface
+实例,Shílì,(computing term) instance / An example of
+技术,Jìshù,technical
+运维,Yùnwéi,operation and maintenance
+云原生,Yúnyuánshēng,cloud native
+项目追踪,Xiàngmùzhuīzōng,project tracking
+延迟,Yánchí,delay
+覆盖,Fùgài,cover
+触发,Chùfā,trigger
+类型,Lèixíng,type of ~[something]
+函数,Hánshù,function
+共享,Gòngxiǎng,share
+场景,Chǎngjǐng,situation / scenario
+系统,Xìtǒng,system
+重试队列,Chóngshìduìliè,retry queue
+规则,Guīzé,rule
+遵循,Zūnxún,follow
+研发,Yánfā,"Research and Development, R&D"
+事故,Shìgù,accident
+复盘,Fùpán,remediation/re-continuation
+业务,Yèwù,business
+立即,Lìjí,immediate
+指定,Zhǐdìng,to appoint / to assign
+确认,Quèrèn,confirm
+缩减,Suōjiǎn,reduce
+节点,Jiédiǎn,node
+参数,Cānshù,parameter
+基于,Jīyú,based on ~[something]
+审核,Shěnhé,Audit
+领域,Lǐngyù,domain
+概念,Gàiniàn,concept
+循环,Xúnhuán,cycle (noun; not the physical sport)
+即可,Jíkě,Can then (e.g. do something)
+缓存,Huǎncún,Cache
+整合,Zhěnghé,integration
+排序,Páixù,sort (verb)
+规划,Guīhuà,planning
+拉取,Lāqǔ,(computing term) client pull
+额外,Éwài,additional
+说明,Shuōmíng,information/explanation
+逐步,Zhúbù,step-by-step
+扩展,Kuòzhǎn,expand
+相应,Xiāngyìng,corresponding/relevant/appropriate
+频繁,Pínfán,frequent
+排除,Páichú,exclude
+导致,Dǎozhì,"lead to, resulting in"
+细节,Xìjié,details/particulars
+强调,Qiángdiào,emphasize
+交流,Jiāoliú,communicate
+将,Jiāng,[something]~ will
+过滤,Guòlǜ,filter (verb)
+术语,Shùyǔ,terminology
+解释,Jiěshì,explain
+负责,Fùzé,responsible for ~[something]
+监控,Jiānkòng,to monitor
+告警,Gàojǐng,to report
+顺序,Shùnxù,"sequence, order"
+规模,Guīmó,scale (noun)
+暴露,Bàolù,to expose; to reveal; to lay bare
+稳定,Wěndìng,stability
+存储,Cúnchú,to store; memory; storage
+实际,Shíjì,actual
+拷贝,kǎobèi,"copy (loanword, i.e. it sounds like copy)"
+策略,cèlüè,strategy; tactics
+磁盘,cípán,(computing term) disk
+瓶颈,píngjǐng,bottleneck
+调度,Diàodù,scheduling
+恢复,Huīfù,recover
+持久化存储,Chíjiǔhuàcúnchú,persistent storage
+弹性,tánxìng,elasticity; flexibility
+目录,mùlù,directory (on computer hard drive); list; contents
+代码,dàimǎ,code
+测试用例,cèshì yònglì,test case
+数据库,shùjùkù,database
+输入,shūrù,input
+输出,shūchū,output
+访问,fǎngwèn,"access (verb), as in access a link or website"
+链接,liànjiē,link
+内存,nèicún,memory (as in RAM)
+内存使用率,nèicún shǐyònglǜ,memory utilization (memory usage rate)
+数据结构,shùjù jiégòu,data structure
+算法,suànfǎ,algorithm
+时间复杂度,shíjiān fùzádù,time complexity
+空间复杂度,kōngjiān fùzádù,space complexity
+平方,píngfāng,"[something]~ squared, e.g. n 的平方 = n squared"
+立方,lìfāng,"[something]~ cubed, e.g. n 的立方 = n cubed"
+次方,cìfāng,"[something]~ to the power of ~[something], e.g. n 的 k 次方 = n to the power of k"
+运行,yùnxíng,"to run (a program, a script)"

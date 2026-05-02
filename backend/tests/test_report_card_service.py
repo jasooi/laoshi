@@ -111,7 +111,7 @@ def _create_attempt(db, word, session, attempt_number, is_correct,
         attempt_number=attempt_number,
         sentence=sentence,
         is_correct=is_correct,
-        created_ds=created_ds or datetime.utcnow(),
+        created_ds=created_ds or datetime.now(timezone.utc),
     )
     db.session.add(attempt)
     db.session.commit()

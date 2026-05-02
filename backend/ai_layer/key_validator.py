@@ -3,7 +3,8 @@
 import asyncio
 import logging
 from typing import Tuple
-from openai import AsyncOpenAI
+import aiohttp
+from openai import AsyncOpenAI, APIStatusError
 
 logger = logging.getLogger(__name__)
 
@@ -38,50 +39,49 @@ async def validate_deepseek_key(api_key: str) -> Tuple[bool, str | None]:
 
     except asyncio.TimeoutError:
         return False, "Validation timeout"
-    except Exception as e:
-        error_str = str(e).lower()
-        if "401" in error_str or "unauthorized" in error_str:
+    except APIStatusError as e:
+        logger.info(f"DeepSeek validation HTTP {e.status_code}: {e.message}")
+        if e.status_code == 401:
             return False, "Invalid API key"
-        elif "429" in error_str or "rate limit" in error_str:
+        elif e.status_code == 429:
             return False, "Rate limit exceeded"
-        elif "500" in error_str or "502" in error_str or "503" in error_str:
+        elif e.status_code >= 500:
             return False, "Service unavailable"
         else:
-            logger.error(f"Unexpected error validating DeepSeek key: {e}")
             return False, "Validation failed"
+    except Exception as e:
+        logger.error(f"Unexpected error validating DeepSeek key: {e}")
+        return False, "Validation failed"
 
 
 async def validate_gemini_key(api_key: str) -> Tuple[bool, str | None]:
-    """Test a Gemini API key with a minimal API call.
+    """Test a Gemini API key with a lightweight models.list GET request.
+
+    Uses the native Gemini REST API (not OpenAI-compat) to avoid
+    triggering generation rate limits on free-tier keys.
 
     Returns:
         Tuple of (is_valid, error_message).
         error_message is None if valid, otherwise contains user-friendly error.
     """
+    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     try:
-        client = AsyncOpenAI(
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai",
-            api_key=api_key
-        )
-
-        # Make a minimal API call (list models)
-        await asyncio.wait_for(
-            client.models.list(),
-            timeout=VALIDATION_TIMEOUT
-        )
-
-        return True, None
-
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=VALIDATION_TIMEOUT)) as resp:
+                status = resp.status
+                if status == 200:
+                    return True, None
+                logger.info(f"Gemini validation HTTP {status}")
+                if status == 400 or status == 401 or status == 403:
+                    return False, "Invalid API key"
+                elif status == 429:
+                    return False, "Rate limit exceeded"
+                elif status >= 500:
+                    return False, "Service unavailable"
+                else:
+                    return False, "Validation failed"
     except asyncio.TimeoutError:
         return False, "Validation timeout"
     except Exception as e:
-        error_str = str(e).lower()
-        if "401" in error_str or "unauthorized" in error_str:
-            return False, "Invalid API key"
-        elif "429" in error_str or "rate limit" in error_str:
-            return False, "Rate limit exceeded"
-        elif "500" in error_str or "502" in error_str or "503" in error_str:
-            return False, "Service unavailable"
-        else:
-            logger.error(f"Unexpected error validating Gemini key: {e}")
-            return False, "Validation failed"
+        logger.error(f"Unexpected error validating Gemini key: {e}")
+        return False, "Validation failed"

@@ -38,6 +38,13 @@ class Config():
     # Encryption for BYOK API keys
     ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 
+    # Email (SendGrid)
+    SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+    FROM_EMAIL = os.getenv('FROM_EMAIL', 'hello@kotoba-nest.org')
+    APP_BASE_URL = os.getenv('APP_BASE_URL', 'https://laoshi.zeabur.app')
+    ONBOARDING_EMAIL_TEMPLATE = os.getenv('ONBOARDING_EMAIL_TEMPLATE')
+    PASSWORD_RESET_EMAIL_TEMPLATE = os.getenv('PASSWORD_RESET_EMAIL_TEMPLATE')
+
     # Rate limiting - use memory storage to avoid Redis connection issues
     RATELIMIT_STORAGE_URI = 'memory://'
     RATELIMIT_STRATEGY = 'fixed-window'

@@ -48,32 +48,3 @@ def delete_memory(ctx: RunContextWrapper[UserSessionContext], memory_id: str) ->
 	return f"Memory {memory_id} deleted."
 
 
-
-# app db functions
-@function_tool
-def get_recent_sessions(user_id: int, last_n: int) -> list[]:
-    """Queries the app database to retrieve the last N session 
-    details of the user with user_id.
-    Output: list of session details (session_start_timestamp, ...)"""
-
-@function_tool
-def get_session_words(session_id: int) -> list[]:
-    """Queries the app database to retrieve the words practiced in
-    the session with session_id.
-    Output: list of words and corresponding session data (...)"""
-
-
-@function_tool
-def get_recent_mistakes(session_id: int) -> list[]:
-    """Queries the app database to retrieve the words practiced in
-    the session with session_id.
-    Output: list of words and corresponding session data (...)"""
-
-
-@function_tool
-def get_session_words(session_id: int) -> list[]:
-    """Queries the app database to retrieve the words practiced in
-    the session with session_id.
-    Output: list of words and corresponding session data (...)"""
-    
-    

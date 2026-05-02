@@ -3,6 +3,7 @@ import { progressApi } from '../lib/api'
 import { useHome } from '../pages/home/HomeContext'
 import { Check, X } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { renderMarkdown } from '../utils/markdown'
 
 interface SessionSummaryProps {
   summary: PracticeSummaryResponse
@@ -32,9 +33,9 @@ export function SessionSummary({ summary, onNewSession }: SessionSummaryProps) {
 
         {/* AI Summary */}
         <div className="bg-sage-tint border border-sage/15 rounded-2xl p-8 mb-10">
-          <p className="italic text-base text-warm-black/70 leading-relaxed">
-            {summary.summary_text}
-          </p>
+          <div className="italic text-base text-warm-black/70 leading-relaxed">
+            {renderMarkdown(summary.summary_text)}
+          </div>
         </div>
 
         {/* Results table */}

@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setUser(null)
     setAccessToken(null)
+    localStorage.removeItem('laoshi_active_session')
   }, [])
 
   // Register the refresh failure callback with the Axios interceptor
@@ -79,6 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const accessToken = response.data.access_token
     setToken(accessToken)
     setAccessToken(accessToken)
+
+    // Clear any existing practice session to ensure fresh start after login
+    localStorage.removeItem('laoshi_active_session')
 
     // Fetch user info
     const userResponse = await api.get('/api/me')

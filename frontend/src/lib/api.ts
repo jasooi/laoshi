@@ -222,4 +222,21 @@ export const settingsApi = {
     ),
 }
 
+// Password reset API helpers (public — no auth required)
+export const passwordResetApi = {
+  requestReset: (email: string) =>
+    api.post<{ registered: boolean }>('/api/password-reset/request', { email }),
+  resetPassword: (token: string, newPassword: string) =>
+    api.post<{ message: string }>('/api/password-reset/reset', {
+      token,
+      new_password: newPassword,
+    }),
+}
+
+// Account API helpers
+export const accountApi = {
+  deleteAccount: (password: string) =>
+    api.delete('/api/account', { data: { password } }),
+}
+
 export default api

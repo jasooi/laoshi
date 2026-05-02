@@ -9,7 +9,7 @@ const RATINGS = [
   { value: 2, label: 'Hard' },
   { value: 3, label: 'OK' },
   { value: 4, label: 'Good' },
-  { value: 5, label: 'Easy' },
+  { value: 5, label: 'Mastered' },
 ]
 
 /** 3-tier color coding: 0-2 coral, 3 amber, 4-5 sage */

@@ -1,4 +1,5 @@
 """Settings API endpoints for user preferences and BYOK API keys."""
+import asyncio
 from flask import request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -95,7 +96,7 @@ class UserSettingsKeyResource(Resource):
 
 class UserSettingsKeyValidateResource(Resource):
     @jwt_required()
-    async def post(self, provider):
+    def post(self, provider):
         if provider not in ('deepseek', 'gemini'):
             return {"error": "Invalid provider. Must be 'deepseek' or 'gemini'."}, 400
 
@@ -109,12 +110,12 @@ class UserSettingsKeyValidateResource(Resource):
 
         # Validate the key with real API call
         if provider == 'deepseek':
-            is_valid, error = await validate_deepseek_key(api_key)
+            is_valid, error = asyncio.run(validate_deepseek_key(api_key))
         else:
-            is_valid, error = await validate_gemini_key(api_key)
+            is_valid, error = asyncio.run(validate_gemini_key(api_key))
 
         if not is_valid:
-            return {"error": error}, 400
+            return {"valid": False, "error": error}, 200
 
         # Key is valid - save it
         user_id = int(get_jwt_identity())
@@ -135,6 +136,7 @@ class UserSettingsKeyValidateResource(Resource):
         profile.update()
 
         return {
+            "valid": True,
             "message": f"{provider.title()} API key saved",
             f"has_{provider}_key": True
         }, 200

@@ -2,7 +2,7 @@
 # 4 models to be defined: Word, Word_session, Session, User
 
 from extensions import db
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from utils import construct_date_range_filter
 import math
 
@@ -14,14 +14,14 @@ class Deck(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String(500), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     laoshi_message = db.Column(db.String(500), nullable=True)
-    created_ds = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_ds = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_ds = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Relationships
     user = db.relationship('User', back_populates='decks')
-    words = db.relationship('Word', back_populates='deck')
+    words = db.relationship('Word', back_populates='deck', cascade='all, delete-orphan')
     sessions = db.relationship('UserSession', back_populates='deck')
 
     def format_data(self, viewer=None):
@@ -47,7 +47,7 @@ class Deck(db.Model):
 
     def update(self):
         try:
-            self.updated_ds = datetime.utcnow()
+            self.updated_ds = datetime.now(timezone.utc)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -83,10 +83,10 @@ class Word(db.Model):
     pinyin = db.Column(db.String(150), nullable=False)
     meaning = db.Column(db.String(300), nullable=False)
     notes = db.Column(db.String(200), nullable=True, default=None)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
 
     # Deck relationship
-    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id"), nullable=True)
+    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id", ondelete="CASCADE"), nullable=True)
     deck = db.relationship('Deck', back_populates='words')
 
     # SRS (Spaced Repetition System) fields
@@ -101,7 +101,7 @@ class Word(db.Model):
     is_mastered = db.Column(db.Boolean, default=False)
 
     user = db.relationship('User', back_populates='words')
-    sessions = db.relationship('SessionWord', back_populates='word')
+    sessions = db.relationship('SessionWord', back_populates='word', cascade='all, delete')
 
     @property
     def srs_status(self):
@@ -335,10 +335,11 @@ class User(db.Model):
     created_ds = db.Column(db.DateTime)
     is_admin = db.Column(db.Boolean, default=False)
 
-    words = db.relationship('Word', back_populates='user')
-    decks = db.relationship('Deck', back_populates='user')
-    sessions = db.relationship('UserSession', back_populates='user')
-    profile = db.relationship('UserProfile', uselist=False, back_populates='user', lazy='joined')
+    words = db.relationship('Word', back_populates='user', cascade='all, delete-orphan')
+    decks = db.relationship('Deck', back_populates='user', cascade='all, delete-orphan')
+    sessions = db.relationship('UserSession', back_populates='user', cascade='all, delete-orphan')
+    profile = db.relationship('UserProfile', uselist=False, back_populates='user', cascade='all, delete-orphan', lazy='joined')
+    reset_tokens = db.relationship('PasswordResetToken', back_populates='user', cascade='all, delete-orphan')
 
     def __repr__(self):
         name = (self.profile.preferred_name if self.profile else None) or self.username
@@ -432,7 +433,7 @@ class UserProfile(db.Model):
     __tablename__ = 'user_profile'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False)
     preferred_name = db.Column(db.String(80), nullable=True)
     words_per_session = db.Column(db.Integer, nullable=True)
     encrypted_deepseek_api_key = db.Column(db.Text, nullable=True)
@@ -443,8 +444,8 @@ class UserProfile(db.Model):
     current_streak = db.Column(db.Integer, default=0)
     last_practice_date = db.Column(db.Date, nullable=True)
     onboarding_complete = db.Column(db.Boolean, default=False, nullable=False)
-    created_ds = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_ds = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_ds = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_ds = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', back_populates='profile')
 
@@ -476,7 +477,7 @@ class UserProfile(db.Model):
 
     def update(self):
         try:
-            self.updated_ds = datetime.utcnow()
+            self.updated_ds = datetime.now(timezone.utc)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -493,14 +494,14 @@ class UserSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_start_ds = db.Column(db.DateTime)
     session_end_ds = db.Column(db.DateTime)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id"), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
+    deck_id = db.Column(db.Integer, db.ForeignKey("deck.id", ondelete="SET NULL"), nullable=True)
     summary_text = db.Column(db.Text, nullable=True)
     words_per_session = db.Column(db.Integer, nullable=False, default=10)
 
     user = db.relationship('User', back_populates='sessions')
     deck = db.relationship('Deck', back_populates='sessions')
-    session_words = db.relationship('SessionWord', back_populates='user_session')
+    session_words = db.relationship('SessionWord', back_populates='user_session', cascade='all, delete')
 
     def __repr__(self):
         preferred_name = (self.user.profile.preferred_name if self.user.profile else None) or self.user.username
@@ -583,8 +584,8 @@ class UserSession(db.Model):
 class SessionWord(db.Model):
     __tablename__ = 'session_word'
 
-    word_id = db.Column(db.Integer, db.ForeignKey("word.id"))
-    session_id = db.Column(db.Integer, db.ForeignKey("user_session.id"))
+    word_id = db.Column(db.Integer, db.ForeignKey("word.id", ondelete="CASCADE"))
+    session_id = db.Column(db.Integer, db.ForeignKey("user_session.id", ondelete="CASCADE"))
     session_word_load_ds = db.Column(db.DateTime)
     is_skipped = db.Column(db.Boolean, default=False)
     session_notes = db.Column(db.String(2000))
@@ -604,6 +605,7 @@ class SessionWord(db.Model):
     word = db.relationship('Word', back_populates='sessions')
     user_session = db.relationship('UserSession', back_populates='session_words')
     attempts = db.relationship('SessionWordAttempt', back_populates='session_word',
+                               cascade='all, delete',
                                order_by='SessionWordAttempt.attempt_number')
 
     def __repr__(self):
@@ -683,12 +685,13 @@ class SessionWordAttempt(db.Model):
     naturalness_score = db.Column(db.Float, nullable=True)
     is_correct = db.Column(db.Boolean, nullable=True)
     feedback_text = db.Column(db.Text, nullable=True)
-    created_ds = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_ds = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         db.ForeignKeyConstraint(
             ['word_id', 'session_id'],
-            ['session_word.word_id', 'session_word.session_id']
+            ['session_word.word_id', 'session_word.session_id'],
+            ondelete="CASCADE",
         ),
     )
 
@@ -749,4 +752,34 @@ class TokenBlocklist(db.Model):
     @classmethod
     def is_blocklisted(cls, jti: str) -> bool:
         return cls.query.filter_by(jti=jti).first() is not None
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_token'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
+    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    created_ds = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    expires_ds = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False, nullable=False)
+
+    user = db.relationship('User')
+
+    def is_expired(self):
+        now = datetime.now(timezone.utc)
+        # DB may return naive datetime — assume UTC
+        expires = self.expires_ds if self.expires_ds.tzinfo else self.expires_ds.replace(tzinfo=timezone.utc)
+        return now > expires
+
+    def is_valid(self):
+        return not self.used and not self.is_expired()
+
+    def add(self):
+        try:
+            db.session.add(self)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            raise
 
