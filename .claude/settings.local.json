@@ -32,7 +32,8 @@
       "Bash(pushd:*)",
       "Bash(flask db:*)",
       "Bash(pip show:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(npm test:*)"
     ]
   },
   "enabledPlugins": {

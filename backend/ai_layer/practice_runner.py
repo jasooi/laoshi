@@ -49,16 +49,25 @@ def validate_summary(data: dict) -> dict | None:
 
 
 async def run_with_retry(agent, input, context, session=None, max_attempts=3):
-    """Run agent with exponential backoff retry."""
+    """Run agent with exponential backoff retry.
+
+    When using a persistent session (e.g. Redis), only pass input on the first
+    attempt.  Runner.run() appends input to the session history, so re-passing
+    it on retries would duplicate messages.
+    """
     for attempt in range(max_attempts):
         try:
-            result = await Runner.run(agent, input=input, context=context, session=session)
+            # On retries with a persistent session, the input is already in the
+            # session history from the first attempt — don't append it again.
+            run_input = input if attempt == 0 or session is None else []
+            result = await Runner.run(agent, input=run_input, context=context, session=session)
             return result
         except Exception as e:
             if attempt == max_attempts - 1:
                 raise
             wait_time = 2 ** attempt  # 1s, 2s, 4s
-            await asyncio.sleep(wait_time)  # Use asyncio.sleep, not time.sleep
+            logger.warning(f"Agent retry {attempt + 1}/{max_attempts} after error: {e}")
+            await asyncio.sleep(wait_time)
 
 
 def get_session(session_id: int):
@@ -482,25 +491,32 @@ def handle_message(session_id: int, user_id: int, message: str):
         return None, "No active word in session"
 
     # Get user-specific agent (with BYOK support and version tracking)
-    agent, _, ds_ver, gemini_ver = get_user_agent(user)
+    try:
+        logger.info(f"Getting agent for user {user_id}")
+        agent, _, ds_ver, gemini_ver = get_user_agent(user)
 
-    # Run orchestrator
-    session_obj = get_session(session_id)
-    result = run_async(run_with_retry(
-        agent, input=message, context=ctx, session=session_obj
-    ))
+        # Run orchestrator
+        logger.info(f"Running agent for session {session_id}")
+        session_obj = get_session(session_id)
+        result = run_async(run_with_retry(
+            agent, input=message, context=ctx, session=session_obj
+        ))
+        logger.info(f"Agent execution completed for session {session_id}")
 
-    laoshi_response = result.final_output if hasattr(result, 'final_output') else str(result)
+        laoshi_response = result.final_output if hasattr(result, 'final_output') else str(result)
+    except Exception as e:
+        logger.error(f"AGENT ERROR in session {session_id}: {type(e).__name__}: {e}", exc_info=True)
+        raise  # Re-raise to let the endpoint handler deal with it
 
-    # Debug: log all items from the agent run to diagnose tool call failures
-    from agents.items import ToolCallItem, ToolCallOutputItem
-    for item in result.new_items:
-        if isinstance(item, ToolCallItem):
-            logger.info(f"[DIAG] Tool called: {item.name} | input: {str(item.arguments)[:200]}")
-        elif isinstance(item, ToolCallOutputItem):
-            logger.info(f"[DIAG] Tool output: {str(item.output)[:500]}")
-        else:
-            logger.info(f"[DIAG] Item type: {type(item).__name__} | {str(item)[:200]}")
+    # Debug: log all items from the agent run - safely, without crashing
+    try:
+        from agents.items import ToolCallItem, ToolCallOutputItem
+        for item in result.new_items:
+            # Just log the item type safely without accessing potentially non-existent attributes
+            logger.info(f"[DIAG] Agent result item: {type(item).__name__}")
+    except Exception as e:
+        # Don't crash if diagnostic logging fails
+        logger.debug(f"Diagnostic logging skipped: {e}")
 
     # Defensive score extraction
     feedback = extract_feedback_from_result(result)

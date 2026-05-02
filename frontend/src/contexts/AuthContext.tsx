@@ -81,6 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(accessToken)
     setAccessToken(accessToken)
 
+    // Clear any existing practice session to ensure fresh start after login
+    localStorage.removeItem('laoshi_active_session')
+
     // Fetch user info
     const userResponse = await api.get('/api/me')
     setUser(userResponse.data)

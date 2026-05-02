@@ -93,13 +93,26 @@ def create_app(config_class=None):
         config_class = Config
     app.config.from_object(config_class)
 
-    # Configure logging to stdout so cloud platforms capture it
+    # Configure logging to stdout - force reconfiguration
     logging.basicConfig(
         stream=sys.stdout,
-        level=logging.INFO,
+        level=logging.DEBUG,
         format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
+        force=True  # Force reconfiguration even if already configured
     )
+
+    # Also configure specific loggers explicitly
+    app.logger.setLevel(logging.DEBUG)
+    logging.getLogger('practice_resources').setLevel(logging.DEBUG)
+    logging.getLogger('ai_layer.practice_runner').setLevel(logging.DEBUG)
+
     logger = logging.getLogger(__name__)
+    logger.info("=" * 80)
+    logger.info("BACKEND SERVER STARTING")
+    logger.info("=" * 80)
+    print("=" * 80, flush=True)  # Also print directly to ensure it appears
+    print("BACKEND SERVER STARTING", flush=True)
+    print("=" * 80, flush=True)
 
     # Validate required config
     if not app.config.get('ENCRYPTION_KEY'):
@@ -136,6 +149,6 @@ def create_app(config_class=None):
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)
 
 

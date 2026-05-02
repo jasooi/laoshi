@@ -27,12 +27,14 @@ interface HomeContextValue {
 }
 
 const STORAGE_KEY = 'laoshi_active_session'
+const SESSION_EXPIRY_MS = 60 * 60 * 1000 // 1 hour
 
 function saveSession(data: ActiveSessionData) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     sessionId: data.sessionId,
     deckId: data.deckId,
     deckName: data.deckName,
+    timestamp: Date.now(), // Add timestamp for expiration check
   }))
 }
 
@@ -40,7 +42,20 @@ function loadSession(): ActiveSessionData | null {
   try {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (!saved) return null
-    return JSON.parse(saved)
+
+    const parsed = JSON.parse(saved)
+
+    // Check if session has expired (older than 1 hour)
+    if (parsed.timestamp && Date.now() - parsed.timestamp > SESSION_EXPIRY_MS) {
+      localStorage.removeItem(STORAGE_KEY)
+      return null
+    }
+
+    return {
+      sessionId: parsed.sessionId,
+      deckId: parsed.deckId,
+      deckName: parsed.deckName,
+    }
   } catch {
     localStorage.removeItem(STORAGE_KEY)
     return null

@@ -111,10 +111,25 @@ class PracticeMessageResource(Resource):
             return {'error': f'Message must be at most {MAX_MESSAGE_LENGTH} characters'}, 400
 
         try:
+            print(f"[DEBUG] Processing message for session {id}, user {user_id}", flush=True)
+            logger.info(f"Processing message for session {id}, user {user_id}")
             result, error = handle_message(id, user_id, message)
+            print(f"[DEBUG] Message processed successfully for session {id}", flush=True)
+            logger.info(f"Message processed successfully for session {id}")
         except RateLimitError as e:
             logger.warning(f"AI rate limit hit during message: {e}")
             return RATE_LIMIT_RESPONSE, 429
+        except Exception as e:
+            import traceback
+            print(f"\n{'='*80}", flush=True)
+            print(f"[ERROR] Exception in handle_message for session {id}, user {user_id}", flush=True)
+            print(f"Error type: {type(e).__name__}", flush=True)
+            print(f"Error message: {e}", flush=True)
+            print("Full traceback:", flush=True)
+            traceback.print_exc()
+            print(f"{'='*80}\n", flush=True)
+            logger.error(f"ERROR in handle_message for session {id}, user {user_id}: {e}", exc_info=True)
+            return {'error': 'An internal error occurred'}, 500
         if error:
             status = 404 if 'not found' in error.lower() else 400
             return {'error': error}, status
