@@ -15,7 +15,7 @@ SAMPLE_DECK_LAOSHI_MESSAGE = "This is a sample deck to help you get started with
 def get_sample_csv_path():
     """Return absolute path to the sample CSV file."""
     backend_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(backend_dir, '..', 'sample_decks', 'swe_vocab_list.csv')
+    csv_path = os.path.join(backend_dir, 'sample_decks', 'swe_vocab_list.csv')
     normalized_path = os.path.normpath(csv_path)
     logger.info(f"Sample CSV path: backend_dir={backend_dir}, csv_path={normalized_path}")
     return normalized_path
