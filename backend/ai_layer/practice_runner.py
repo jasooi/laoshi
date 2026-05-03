@@ -254,9 +254,7 @@ def update_streak(user_id: int):
     Update user's practice streak with database-level locking to prevent race conditions.
     Uses SELECT FOR UPDATE to ensure atomic streak updates.
     """
-    # Use transaction with row-level locking
-    with db.session.begin():
-        # Lock the user_profile row for this user
+    try:
         profile = db.session.query(UserProfile).filter_by(
             user_id=user_id
         ).with_for_update().first()
@@ -274,7 +272,10 @@ def update_streak(user_id: int):
             profile.current_streak = 1
 
         profile.last_practice_date = today
-        # No explicit commit needed - db.session.begin() context manager handles it
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
 
 
 def update_srs(word, quality: int):

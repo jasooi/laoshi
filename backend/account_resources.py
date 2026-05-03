@@ -40,7 +40,8 @@ class AccountDeleteResource(Resource):
             logger.info(f"Account deleted for user {user_id}")
             return {"message": "Account deleted successfully"}, 200
 
-        except Exception:
+        except Exception as e:
             db.session.rollback()
             logger.exception(f"Failed to delete account for user {user_id}")
+            logger.error(f"Delete account error details: {type(e).__name__}: {str(e)}")
             return {"error": "Failed to delete account. Please try again."}, 500

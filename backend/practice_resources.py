@@ -153,6 +153,9 @@ class PracticeNextWordResource(Resource):
         except RateLimitError as e:
             logger.warning(f"AI rate limit hit during advance_word: {e}")
             return RATE_LIMIT_RESPONSE, 429
+        except Exception as e:
+            logger.exception(f"Unexpected error in next-word for session {id}: {type(e).__name__}: {e}")
+            return {'error': 'An unexpected error occurred. Please try again.'}, 500
         if error:
             status = 404 if 'not found' in error.lower() else 400
             return {'error': error}, status

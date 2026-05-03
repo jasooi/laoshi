@@ -151,7 +151,7 @@ export default function PracticePanel() {
   const [userInput, setUserInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<PracticeStatus>('ai_typing')
-  const [sessionStats, setSessionStats] = useState({ words_practiced: 0, words_total: 0 })
+  const [sessionStats, setSessionStats] = useState({ words_practiced: 0, words_skipped: 0, words_total: 0 })
   const [showEndModal, setShowEndModal] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
   const [showDivider, setShowDivider] = useState(false)
@@ -187,6 +187,7 @@ export default function PracticePanel() {
       setSession(sessionData)
       setSessionStats({
         words_practiced: sessionData.words_practiced || 0,
+        words_skipped: 0,
         words_total: sessionData.words_total || 0,
       })
 
@@ -264,6 +265,7 @@ export default function PracticePanel() {
       await addLaoshiMessages(data.laoshi_response, data.feedback)
       setSessionStats({
         words_practiced: data.words_practiced,
+        words_skipped: data.words_skipped ?? 0,
         words_total: data.words_total,
       })
 
@@ -325,6 +327,7 @@ export default function PracticePanel() {
 
         setSessionStats({
           words_practiced: data.words_practiced,
+          words_skipped: data.words_skipped ?? 0,
           words_total: data.words_total,
         })
 
@@ -407,6 +410,8 @@ export default function PracticePanel() {
 
   const isInputLocked = ['rating_typing', 'awaiting_rating', 'rating_selected', 'transitioning', 'session_complete'].includes(status)
   const isSessionComplete = status === 'session_complete'
+  const isLastWord = sessionStats.words_total > 0 &&
+    sessionStats.words_practiced + sessionStats.words_skipped >= sessionStats.words_total - 1
 
   // Find the last rating message ID for isLatest check
   const ratingMessages = messages.filter(m => m.ratingData)
@@ -576,7 +581,7 @@ export default function PracticePanel() {
                   }`}
                 >
                   <ChevronsRight className="w-4 h-4" />
-                  Next Word
+                  {isLastWord ? 'End Session' : 'Next Word'}
                 </button>
                 <div className="flex items-center gap-4">
                   <span className="text-xs text-warm-black/40">
