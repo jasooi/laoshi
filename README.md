@@ -7,6 +7,8 @@ Initially, I built this because I realised that English words don't map well to 
 
 That's why I started building Laoshi.
 
+Although the name is Laoshi (老师), which is Teacher in Chinese, I have expanded it to include Japanese because I faced the same issue in Japanese as an English native speaker.
+
 # Laoshi features
 - Spaced repetition so you are shown the words you need the most practice for
 - Vocabulary decks to easily manage your words
