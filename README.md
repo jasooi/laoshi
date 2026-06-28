@@ -1,6 +1,24 @@
-# Laoshi Coach
+# Laoshi TLDR
 
-A Mandarin Chinese language learning app that helps users practice sentence formation with AI-powered coaching. Users import vocabulary, practice creating sentences with target words, and receive evaluation and feedback with confidence score tracking.
+A Chinese and Japanese language learning web app that helps people practice their sentence formation with AI-powered coaching. You can import your own vocabulary, practice creating sentences with target words, and receive feedback on collocations and word use.
+
+# Why I built this
+Initially, I built this because I realised that English words don't map well to Chinese words. Often, one English word has multiple Chinese translations which all sounded the same and I found that having feedback from a native speaker really helped me to learn how to use each word in the correct context. I wanted to have this sort of feedback as an app or website I could access anywhere anytime, but existing language learning apps didn't allow me to import my own vocabulary. That's why I started building Laoshi.
+
+# Laoshi features
+- Spaced repetition so you are shown the words you need the most practice for
+- Vocabulary decks to easily manage your words
+- Chat-like interface for an intuitive user experience
+- Progress dashboard to track your progress
+- Bring Your Own Key (BYOK) so that you can continue practicing with your own API key when the available rate limit is used up
+
+# What's next
+Now I'm working on enabling Laoshi for mobile, starting with Android.
+
+# Resources
+Demo video: https://youtu.be/htzxkswIqto
+Try Laoshi at https://laoshi.zeabur.app/login
+
 
 ## Tech Stack
 
@@ -28,6 +46,7 @@ A Mandarin Chinese language learning app that helps users practice sentence form
 
 **Gateway**
 - Nginx reverse proxy for production routing
+
 
 ## Project Structure
 
@@ -71,6 +90,7 @@ laoshi/
 └── .env                    # Environment variables (not committed)
 ```
 
+
 ## Getting Started
 
 ### Prerequisites
@@ -112,15 +132,12 @@ npm install
 npm run dev
 ```
 
-The frontend runs at `http://localhost:5173` and proxies API requests to the backend at `http://localhost:5000`.
-
 ### Production Deployment
 
-In production, the Nginx gateway (`gateway/`) serves as the single public entry point:
+The Nginx gateway (`gateway/`) serves as the single public entry point:
 - `/api/*` requests are routed to the backend service
 - All other requests are routed to the frontend service
 
-Deploy the gateway as a separate service alongside the frontend and backend. Bind your public domain to the gateway only.
 
 ## Environment Variables
 
@@ -139,6 +156,11 @@ Backend requires a `.env` file with:
 | `GEMINI_MODEL_NAME` | Gemini model identifier |
 | `MEM0_API_KEY` | API key for mem0 persistent memory |
 | `REDIS_URI` | Redis connection string |
+| `SENDGRID_API_KEY` | API key for SendGrid automated email |
+| `FROM_EMAIL` | Email for SendGrid automated email |
+| `ONBOARDING_EMAIL_TEMPLATE` | Onboarding email template ID for SendGrid automated email |
+| `PASSWORD_RESET_EMAIL_TEMPLATE` | Password reset email template ID for SendGrid automated email |
+
 
 ## API Overview
 
@@ -153,11 +175,12 @@ All endpoints are prefixed with `/api`. Most require JWT authentication.
 | Settings | `GET/PUT /api/settings`, `DELETE /api/settings/keys/<provider>`, `POST .../validate` |
 | Progress | `GET /api/progress/stats` |
 
+
 ## Data Models
 
 - **User** - Account with username, email, hashed password
 - **UserProfile** - 1:1 with User. Stores preferred name, words per session, encrypted BYOK API keys
-- **Word** - Vocabulary entry with Chinese characters, pinyin, meaning, and confidence score (0-1) determining status (Needs Revision / Learning / Reviewing / Mastered)
+- **Word** - Vocabulary entry with Chinese/Japanese characters, reading, meaning, and 
 - **UserSession** - Practice session with timestamps, summary text, words per session count
 - **SessionWord** - Links words to sessions with averaged scores and correctness tracking
 - **SessionWordAttempt** - Individual sentence attempts with per-attempt feedback scores
