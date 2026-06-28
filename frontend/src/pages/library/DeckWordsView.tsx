@@ -20,21 +20,21 @@ function EditWordModal({
 }: {
   word: Word
   onClose: () => void
-  onSave: (data: { word: string; pinyin: string; meaning: string; notes: string }) => void
+  onSave: (data: { word: string; reading: string; meaning: string; notes: string }) => void
 }) {
   const [form, setForm] = useState({
     word: word.word,
-    pinyin: word.pinyin,
+    reading: word.reading,
     meaning: word.meaning,
     notes: word.notes || '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (form.word.trim() && form.pinyin.trim() && form.meaning.trim()) {
+    if (form.word.trim() && form.reading.trim() && form.meaning.trim()) {
       onSave({
         word: form.word.trim(),
-        pinyin: form.pinyin.trim(),
+        reading: form.reading.trim(),
         meaning: form.meaning.trim(),
         notes: form.notes.trim(),
       })
@@ -58,11 +58,11 @@ function EditWordModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-warm-black mb-1">Pinyin *</label>
+              <label className="block text-sm font-medium text-warm-black mb-1">Reading *</label>
               <input
                 type="text"
-                value={form.pinyin}
-                onChange={(e) => setForm({ ...form, pinyin: e.target.value })}
+                value={form.reading}
+                onChange={(e) => setForm({ ...form, reading: e.target.value })}
                 className="w-full px-3 py-2 border border-warm-gray rounded-lg focus:ring-2 focus:ring-sage focus:border-transparent"
               />
             </div>
@@ -96,7 +96,7 @@ function EditWordModal({
             </button>
             <button
               type="submit"
-              disabled={!form.word.trim() || !form.pinyin.trim() || !form.meaning.trim()}
+              disabled={!form.word.trim() || !form.reading.trim() || !form.meaning.trim()}
               className="px-4 py-2 bg-sage text-white rounded-lg hover:bg-sage/90 disabled:bg-warm-gray font-medium"
             >
               Save
@@ -136,7 +136,7 @@ function UploadWordsModal({
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <h3 className="text-lg font-semibold text-warm-black mb-4">Upload Words</h3>
         <p className="text-sm text-warm-muted mb-4">
-          Upload a CSV file with columns: word, pinyin, and meaning (or english)
+          Upload a CSV file with columns: word, reading, and meaning (or english)
         </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
@@ -305,7 +305,7 @@ function WordsTable({
   const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [sortBy, setSortBy] = useState('pinyin')
+  const [sortBy, setSortBy] = useState('reading')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [editingWord, setEditingWord] = useState<Word | null>(null)
   const [deletingWord, setDeletingWord] = useState<Word | null>(null)
@@ -346,26 +346,26 @@ function WordsTable({
   }
 
   const handleSort = () => {
-    if (sortBy === 'pinyin' && sortOrder === 'asc') {
+    if (sortBy === 'reading' && sortOrder === 'asc') {
       setSortOrder('desc')
-    } else if (sortBy === 'pinyin' && sortOrder === 'desc') {
+    } else if (sortBy === 'reading' && sortOrder === 'desc') {
       setSortBy('meaning')
       setSortOrder('asc')
     } else if (sortBy === 'meaning' && sortOrder === 'asc') {
       setSortOrder('desc')
     } else {
-      setSortBy('pinyin')
+      setSortBy('reading')
       setSortOrder('asc')
     }
   }
 
   const getSortLabel = () => {
-    const col = sortBy === 'pinyin' ? 'Pinyin' : 'Meaning'
+    const col = sortBy === 'reading' ? 'Reading' : 'Meaning'
     const dir = sortOrder === 'asc' ? '↑' : '↓'
     return `Sort by ${col} ${dir}`
   }
 
-  const handleEditSave = async (data: { word: string; pinyin: string; meaning: string; notes: string }) => {
+  const handleEditSave = async (data: { word: string; reading: string; meaning: string; notes: string }) => {
     if (!editingWord) return
     try {
       await wordsApi.updateWord(editingWord.id, data)
@@ -442,7 +442,7 @@ function WordsTable({
                   <tr className="border-b border-warm-gray">
                     <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted w-12">#</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted">中文</th>
-                    <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted">Pinyin</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted">Reading</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted">Meaning</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted">Notes</th>
                     <th className="text-left px-4 py-3 text-sm font-medium text-warm-muted w-24">Actions</th>
@@ -455,7 +455,7 @@ function WordsTable({
                         {pagination ? (pagination.page - 1) * perPage + index + 1 : index + 1}
                       </td>
                       <td className="px-4 py-3 font-medium text-warm-black text-lg">{word.word}</td>
-                      <td className="px-4 py-3 text-warm-black">{word.pinyin}</td>
+                      <td className="px-4 py-3 text-warm-black">{word.reading}</td>
                       <td className="px-4 py-3 text-warm-black">{word.meaning}</td>
                       <td className="px-4 py-3 text-warm-muted text-sm">{word.notes || '—'}</td>
                       <td className="px-4 py-3">

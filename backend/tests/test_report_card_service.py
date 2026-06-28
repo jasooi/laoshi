@@ -58,11 +58,11 @@ def _create_user(db, username='testuser', email='test@example.com'):
     return user
 
 
-def _create_word(db, user, word_text='hello', pinyin='ni hao', meaning='hello'):
+def _create_word(db, user, word_text='hello', reading='ni hao', meaning='hello'):
     """Insert a single Word for *user* and return it."""
     word = Word(
         word=word_text,
-        pinyin=pinyin,
+        reading=reading,
         meaning=meaning,
         user_id=user.id,
     )

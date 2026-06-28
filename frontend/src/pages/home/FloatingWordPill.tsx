@@ -59,7 +59,7 @@ export default function FloatingWordPill({ word, notes }: FloatingWordPillProps)
                       {word.word}
                     </span>
                     <span className="text-sm font-medium text-sage">
-                      {word.pinyin}
+                      {word.reading}
                     </span>
                   </div>
 
@@ -93,7 +93,7 @@ export default function FloatingWordPill({ word, notes }: FloatingWordPillProps)
                   {word.word}
                 </span>
                 <span className="text-sm text-warm-black/40">
-                  {word.pinyin}
+                  {word.reading}
                 </span>
                 <span className="text-warm-black/20">&mdash;</span>
                 <span className="text-sm text-warm-black/50 truncate max-w-[240px]">

@@ -8,7 +8,6 @@ from ai_layer.practice_runner import (
     validate_feedback,
     validate_summary,
     hydrate_context,
-    update_confidence,
     extract_feedback_from_result,
     get_session,
 )
@@ -135,7 +134,7 @@ class TestHydrateContext:
         word1 = Mock()
         word1.id = 101
         word1.word = "你好"
-        word1.pinyin = "ni hao"
+        word1.reading = "ni hao"
         word1.meaning = "hello"
 
         sw1 = Mock()
@@ -170,19 +169,19 @@ class TestHydrateContext:
         word1 = Mock()
         word1.id = 101
         word1.word = "A"
-        word1.pinyin = "a"
+        word1.reading ="a"
         word1.meaning = "A"
 
         word2 = Mock()
         word2.id = 102
         word2.word = "B"
-        word2.pinyin = "b"
+        word2.reading ="b"
         word2.meaning = "B"
 
         word3 = Mock()
         word3.id = 103
         word3.word = "C"
-        word3.pinyin = "c"
+        word3.reading ="c"
         word3.meaning = "C"
 
         sw1 = Mock()
@@ -226,13 +225,13 @@ class TestHydrateContext:
         word1 = Mock()
         word1.id = 101
         word1.word = "A"
-        word1.pinyin = "a"
+        word1.reading ="a"
         word1.meaning = "A"
 
         word2 = Mock()
         word2.id = 102
         word2.word = "B"
-        word2.pinyin = "b"
+        word2.reading ="b"
         word2.meaning = "B"
 
         sw1 = Mock()
@@ -253,58 +252,6 @@ class TestHydrateContext:
 
         assert ctx.session_complete is True
         assert ctx.current_word is None
-
-
-class TestUpdateConfidence:
-    """Tests for update_confidence function."""
-
-    def test_correct_answer_increases_confidence(self):
-        """Should increase confidence for correct answer with good scores."""
-        word = Mock()
-        word.confidence_score = 0.5
-
-        update_confidence(word, 10, 9, 8, True)
-
-        # correctness_factor = 1.0, quality_multiplier = (0.4*10 + 0.4*9 + 0.2*8)/10 = 0.92
-        # new_score = 0.5 + 1.0 * 0.92 * 0.1 = 0.592
-        assert word.update_confidence_score.called
-        args = word.update_confidence_score.call_args[0]
-        assert args[0] > 0.5  # Should be increased
-
-    def test_incorrect_answer_decreases_confidence(self):
-        """Should decrease confidence for incorrect answer."""
-        word = Mock()
-        word.confidence_score = 0.5
-
-        update_confidence(word, 5, 5, 5, False)
-
-        # correctness_factor = -0.5, quality_multiplier = (0.4*5 + 0.4*5 + 0.2*5)/10 = 0.5
-        # new_score = 0.5 + (-0.5) * 0.5 * 0.1 = 0.475
-        assert word.update_confidence_score.called
-        args = word.update_confidence_score.call_args[0]
-        assert args[0] < 0.5  # Should be decreased
-
-    def test_confidence_clamped_to_maximum(self):
-        """Should not exceed 1.0."""
-        word = Mock()
-        word.confidence_score = 0.99
-
-        update_confidence(word, 10, 10, 10, True)
-
-        assert word.update_confidence_score.called
-        args = word.update_confidence_score.call_args[0]
-        assert args[0] == 1.0
-
-    def test_confidence_clamped_to_minimum(self):
-        """Should not go below 0.0."""
-        word = Mock()
-        word.confidence_score = 0.01
-
-        update_confidence(word, 1, 1, 1, False)
-
-        assert word.update_confidence_score.called
-        args = word.update_confidence_score.call_args[0]
-        assert args[0] >= 0.0  # Should be clamped to at least 0
 
 
 class TestExtractFeedbackFromResult:
@@ -368,8 +315,13 @@ class TestGetSession:
         assert session is None
 
     def test_returns_redis_session_with_url(self, monkeypatch):
-        """Should return RedisSession when REDIS_URI is set."""
+        """Should return RedisSession when REDIS_URI is set and Redis is reachable."""
+        from unittest.mock import patch, MagicMock
         from agents.extensions.memory import RedisSession
         monkeypatch.setenv("REDIS_URI", "redis://localhost:6379/0")
-        session = get_session(123)
-        assert isinstance(session, RedisSession)
+
+        # Mock the synchronous Redis ping check so the test doesn't need a real server
+        mock_client = MagicMock()
+        with patch("redis.from_url", return_value=mock_client):
+            session = get_session(123)
+            assert isinstance(session, RedisSession)

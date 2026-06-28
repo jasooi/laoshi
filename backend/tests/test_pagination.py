@@ -48,7 +48,7 @@ def _create_words(db, user, count):
     for i in range(count):
         w = Word(
             word=f'字{i}',
-            pinyin=f'zi{i}',
+            reading=f'zi{i}',
             meaning=f'meaning{i}',
             user_id=user.id,
         )

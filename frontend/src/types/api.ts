@@ -3,7 +3,7 @@
 export interface Word {
   id: number
   word: string
-  pinyin: string
+  reading: string
   meaning: string
   notes: string | null
   deck_id: number | null
@@ -60,7 +60,7 @@ export interface PaginatedResponse<T> {
 export interface WordContext {
   word_id: number
   word: string
-  pinyin: string
+  reading: string
   meaning: string
 }
 
@@ -97,7 +97,7 @@ export interface PracticeSession {
 export interface PracticeResponse {
   word_id: number
   target_word: string
-  target_pinyin: string
+  target_reading: string
   target_english: string
   user_sentence: string
   is_correct: boolean
@@ -193,6 +193,7 @@ export interface Deck {
   description: string | null
   user_id: number
   laoshi_message: string | null
+  language: 'ZH' | 'JP'
   created_ds: string
   updated_ds: string
 }

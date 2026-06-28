@@ -10,7 +10,7 @@ interface EditWordModalProps {
 }
 
 const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => {
-  const [editForm, setEditForm] = useState({ word: '', pinyin: '', meaning: '', notes: '' })
+  const [editForm, setEditForm] = useState({ word: '', reading: '', meaning: '', notes: '' })
   const [editError, setEditError] = useState<string | null>(null)
   const [editSaving, setEditSaving] = useState(false)
 
@@ -18,7 +18,7 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
     if (word) {
       setEditForm({
         word: word.word,
-        pinyin: word.pinyin,
+        reading: word.reading,
         meaning: word.meaning,
         notes: word.notes || '',
       })
@@ -29,8 +29,8 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
   if (!word) return null
 
   const handleEditSubmit = async () => {
-    if (!editForm.word.trim() || !editForm.pinyin.trim() || !editForm.meaning.trim()) {
-      setEditError('Word, pinyin, and meaning are required.')
+    if (!editForm.word.trim() || !editForm.reading.trim() || !editForm.meaning.trim()) {
+      setEditError('Word, reading, and meaning are required.')
       return
     }
     setEditSaving(true)
@@ -38,7 +38,7 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
     try {
       const payload: Record<string, string> = {
         word: editForm.word.trim(),
-        pinyin: editForm.pinyin.trim(),
+        reading: editForm.reading.trim(),
         meaning: editForm.meaning.trim(),
       }
       if (editForm.notes.trim()) {
@@ -84,11 +84,11 @@ const EditWordModal = ({ word, onClose, onSaveSuccess }: EditWordModalProps) => 
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-warm-black mb-1">Pinyin</label>
+            <label className="block text-sm font-medium text-warm-black mb-1">Reading</label>
             <input
               type="text"
-              value={editForm.pinyin}
-              onChange={(e) => setEditForm({ ...editForm, pinyin: e.target.value })}
+              value={editForm.reading}
+              onChange={(e) => setEditForm({ ...editForm, reading: e.target.value })}
               className="w-full px-4 py-2.5 border border-warm-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-sage focus:border-transparent"
             />
           </div>

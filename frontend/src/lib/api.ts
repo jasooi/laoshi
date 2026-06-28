@@ -173,7 +173,7 @@ export const progressApi = {
 // Deck API helpers
 export const deckApi = {
   getDecks: () => api.get<{ decks: DeckWithStats[] }>('/api/decks'),
-  createDeck: (data: { name: string; description?: string }) =>
+  createDeck: (data: { name: string; description?: string; language?: 'ZH' | 'JP' }) =>
     api.post<DeckWithStats>('/api/decks', data),
   getDeck: (id: number) => api.get<DeckWithStats>(`/api/decks/${id}`),
   updateDeck: (id: number, data: { name?: string; description?: string }) =>
@@ -181,7 +181,7 @@ export const deckApi = {
   deleteDeck: (id: number) => api.delete(`/api/decks/${id}`),
   getDeckWords: (id: number, params?: { page?: number; per_page?: number; search?: string; sort_by?: string; sort_order?: string }) =>
     api.get<PaginatedResponse<Word>>(`/api/decks/${id}/words`, { params }),
-  addWordsToDeck: (id: number, words: { word: string; pinyin: string; meaning: string; notes?: string }[]) =>
+  addWordsToDeck: (id: number, words: { word: string; reading: string; meaning: string; notes?: string }[]) =>
     api.post<{ created: Word[] }>(`/api/decks/${id}/words`, { words }),
   combineDecks: (data: { name: string; description?: string; source_deck_ids: number[] }) =>
     api.post<DeckWithStats & { words_copied: number }>('/api/decks/combine', data),
@@ -204,7 +204,7 @@ export const wordsApi = {
   },
   markAsMastered: (wordId: number, marked?: boolean) =>
     api.post<Word & { message: string }>(`/api/words/${wordId}/mark-as-mastered`, { marked }),
-  updateWord: (wordId: number, data: { word?: string; pinyin?: string; meaning?: string; notes?: string }) =>
+  updateWord: (wordId: number, data: { word?: string; reading?: string; meaning?: string; notes?: string }) =>
     api.put<Word>(`/api/words/${wordId}`, data),
   deleteWord: (wordId: number) =>
     api.delete(`/api/words/${wordId}`),

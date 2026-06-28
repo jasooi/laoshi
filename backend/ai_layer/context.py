@@ -6,8 +6,9 @@ from dataclasses import dataclass
 class WordContext:
     word_id: int
     word: str
-    pinyin: str
+    reading: str
     meaning: str
+    language: str
 
 
 @dataclass
@@ -23,6 +24,7 @@ class UserSessionContext:
     session_complete: bool
     mem0_preferences: str | None      # stringified mem0 search results
     word_roster: list[WordContext]     # all session words in word_order
+    language: str
 
 
 @dataclass
@@ -34,3 +36,4 @@ class ReportCardContext:
     avg_grammar: float
     avg_usage: float
     avg_naturalness: float
+    language: str

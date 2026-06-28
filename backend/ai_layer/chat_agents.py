@@ -2,11 +2,32 @@ from agents import Agent, OpenAIChatCompletionsModel
 from openai import AsyncOpenAI
 from ai_layer.context import UserSessionContext, ReportCardContext
 import os
+import logging
 from dotenv import load_dotenv
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 # Load env from project root
 load_dotenv(Path(__file__).resolve().parents[2] / '.env')
+
+# Language configuration for multi-language support
+LANGUAGE_CONFIG = {
+    'ZH': {
+        'name': 'Mandarin Chinese',
+        'reading_label': 'pinyin',
+        'feedback_focus': 'word order, particles, verb aspect, measure words',
+        'feedback_language': 'simple Chinese',
+        'example_type': 'Mandarin Chinese',
+    },
+    'JP': {
+        'name': 'Japanese',
+        'reading_label': 'furigana',
+        'feedback_focus': 'particle usage (wa/ga/wo/ni), verb conjugation, keigo levels, word order (SOV)',
+        'feedback_language': 'simple Japanese',
+        'example_type': 'Japanese',
+    },
+}
 
 # Load env variables
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL")
@@ -30,28 +51,50 @@ deepseek_model = OpenAIChatCompletionsModel(model=DEEPSEEK_MODEL_NAME, openai_cl
 gemini_client = AsyncOpenAI(base_url=GEMINI_BASE_URL, api_key=GEMINI_API_KEY)
 gemini_model = OpenAIChatCompletionsModel(model=GEMINI_MODEL_NAME, openai_client=gemini_client)
 
+# Claude model for Japanese feedback (optional -- only if ANTHROPIC_API_KEY is set)
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_MODEL_NAME = os.getenv("ANTHROPIC_MODEL_NAME", "claude-3-5-sonnet-20241022")
+
+claude_model = None
+if ANTHROPIC_API_KEY:
+    try:
+        claude_client = AsyncOpenAI(
+            base_url="https://api.anthropic.com/v1",
+            api_key=ANTHROPIC_API_KEY,
+        )
+        claude_model = OpenAIChatCompletionsModel(
+            model=ANTHROPIC_MODEL_NAME,
+            openai_client=claude_client,
+        )
+        logger.info("Claude model initialized for JP feedback")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Claude model: {e}. JP feedback will be unavailable.")
+else:
+    logger.info("ANTHROPIC_API_KEY not set. Japanese feedback will use DeepSeek fallback.")
+
 
 def build_feedback_prompt(ctx_wrapper, agent) -> str:
     """Dynamic prompt builder for feedback agent."""
     ctx = ctx_wrapper.context
+    lang = LANGUAGE_CONFIG.get(ctx.language, LANGUAGE_CONFIG['ZH'])
     word = ctx.current_word
-    word_info = f"[DATA]{word.word} ({word.pinyin}) - {word.meaning}[/DATA]" if word else "[DATA]Unknown word[/DATA]"
+    word_info = f"[DATA]{word.word} ({word.reading}) - {word.meaning}[/DATA]" if word else "[DATA]Unknown word[/DATA]"
 
-    return f"""You are a Mandarin Chinese language teacher evaluating a student's sentence.
+    return f"""You are a {lang['name']} language teacher evaluating a student's sentence.
 
 Target vocabulary word: {word_info}
 
 Evaluate the sentence on:
-1. Grammar correctness (1-10): word order, particles, verb aspect, measure words
+1. Grammar correctness (1-10): {lang['feedback_focus']}
 2. Word usage accuracy (1-10): correct meaning/context, appropriate collocations
 3. Naturalness (1-10): native-like expression, idiomatic usage
 4. Overall correctness: true ONLY if grammarScore == 10 AND usageScore >= 8
 
 Provide:
-- Feedback in simple Chinese
+- Feedback in {lang['feedback_language']}
 - Specific corrections if needed, in English
 - Explanation of mistakes if needed, in English
-- 2-3 example Mandarin sentences using the word correctly
+- 2-3 example {lang['example_type']} sentences using the word correctly
 
 Return response in JSON format:
 {{
@@ -69,15 +112,16 @@ Return response in JSON format:
 def build_summary_prompt(ctx_wrapper, agent) -> str:
     """Dynamic prompt builder for summary agent."""
     ctx = ctx_wrapper.context
+    lang = LANGUAGE_CONFIG.get(ctx.language, LANGUAGE_CONFIG['ZH'])
     word_results = []
     for wc in ctx.word_roster:
         status = ctx.session_word_dict.get(wc.word_id, 0)
         status_label = "completed" if status == 1 else ("skipped" if status == -1 else "active")
-        word_results.append(f"- [DATA]{wc.word} ({wc.pinyin})[/DATA]: {status_label}")
+        word_results.append(f"- [DATA]{wc.word} ({wc.reading})[/DATA]: {status_label}")
 
     word_list = "\n".join(word_results) if word_results else "No words in session"
 
-    return f"""You are wrapping up a Mandarin practice session with {ctx.preferred_name}.
+    return f"""You are wrapping up a {lang['name']} practice session with {ctx.preferred_name}.
 
 Your personality: witty, direct, supportive but doesn't sugarcoat. You use light humour and gentle teasing to motivate. You have a pragmatic approach to life.    
 
@@ -92,7 +136,7 @@ Your summary MUST include:
 
 Rules:
 - Write concisely in point form, 3 points maximum.
-- Be specific: cite Chinese words or phrases the student used. Do not speak in generalities.
+- Be specific: cite words or phrases the student used. Do not speak in generalities.
 - Be encouraging but honest.
 - Do not repeat evaluation data verbatim; synthesise into natural teacher feedback.
 
@@ -113,9 +157,10 @@ Return response in JSON format:
 def build_orchestrator_prompt(ctx_wrapper, agent) -> str:
     """Dynamic prompt builder for orchestrator agent."""
     ctx = ctx_wrapper.context
+    lang = LANGUAGE_CONFIG.get(ctx.language, LANGUAGE_CONFIG['ZH'])
     word_info = ""
     if ctx.current_word:
-        word_info = f"\nCurrent word: [DATA]{ctx.current_word.word} ({ctx.current_word.pinyin}) - {ctx.current_word.meaning}[/DATA]"
+        word_info = f"\nCurrent word: [DATA]{ctx.current_word.word} ({ctx.current_word.reading}) - {ctx.current_word.meaning}[/DATA]"
 
     progress = f"{ctx.words_practiced + ctx.words_skipped}/{ctx.words_total} words processed ({ctx.words_practiced} practiced, {ctx.words_skipped} skipped)"
 
@@ -123,7 +168,7 @@ def build_orchestrator_prompt(ctx_wrapper, agent) -> str:
     if ctx.mem0_preferences:
         mem0_section = f"\n\nWhat you remember about this student:\n[DATA]{ctx.mem0_preferences}[/DATA]"
 
-    return f"""You are Laoshi, a sassy-but-encouraging Mandarin Chinese teacher coaching your student {ctx.preferred_name}.
+    return f"""You are Laoshi, a sassy-but-encouraging {lang['name']} teacher coaching your student {ctx.preferred_name}.
 
 Your personality: witty, direct, supportive but doesn't sugarcoat. You use light humour and gentle teasing to motivate. You have a pragmatic approach to life.
 
@@ -190,7 +235,40 @@ laoshi_agent = Agent[UserSessionContext](
 )
 
 
-def build_agents(deepseek_api_key=None, gemini_api_key=None):
+## JP agent singletons (cached at module level, created if claude_model available)
+jp_feedback_agent = None
+jp_laoshi_agent = None
+jp_summary_agent = None
+
+if claude_model:
+    jp_feedback_agent = Agent[UserSessionContext](
+        name="feedback_agent",
+        instructions=build_feedback_prompt,
+        model=claude_model
+    )
+    jp_summary_agent = Agent[UserSessionContext](
+        name="summary_agent",
+        instructions=build_summary_prompt,
+        model=gemini_model
+    )
+    jp_laoshi_agent = Agent[UserSessionContext](
+        name="laoshi_orchestrator",
+        instructions=build_orchestrator_prompt,
+        model=gemini_model,
+        tools=[
+            jp_feedback_agent.as_tool(
+                tool_name="evaluate_sentence",
+                tool_description=(
+                    "Evaluate student's Japanese sentence and give feedback and score in structured output. "
+                    "Pass the student's sentence as input."
+                )
+            )
+        ],
+    )
+    logger.info("JP agent singletons created with Claude feedback model")
+
+
+def build_agents(deepseek_api_key=None, gemini_api_key=None, language='ZH'):
     """Build orchestrator and summary agents with optional custom API keys.
 
     If no custom keys, returns the default module-level agents.
@@ -198,6 +276,8 @@ def build_agents(deepseek_api_key=None, gemini_api_key=None):
     Returns (orchestrator_agent, summary_agent).
     """
     if not deepseek_api_key and not gemini_api_key:
+        if language == 'JP' and jp_laoshi_agent:
+            return jp_laoshi_agent, jp_summary_agent
         return laoshi_agent, summary_agent
 
     # Build custom clients - use custom key if provided, else default
@@ -216,11 +296,19 @@ def build_agents(deepseek_api_key=None, gemini_api_key=None):
         model=GEMINI_MODEL_NAME, openai_client=custom_gemini_client
     )
 
+    # Choose feedback model based on language
+    if language == 'JP' and claude_model:
+        feedback_model = claude_model
+    else:
+        feedback_model = custom_ds_model
+
+    lang = LANGUAGE_CONFIG.get(language, LANGUAGE_CONFIG['ZH'])
+
     # Build custom agents with same prompts
     custom_feedback = Agent[UserSessionContext](
         name="feedback_agent",
         instructions=build_feedback_prompt,
-        model=custom_ds_model
+        model=feedback_model
     )
     custom_summary = Agent[UserSessionContext](
         name="summary_agent",
@@ -235,7 +323,7 @@ def build_agents(deepseek_api_key=None, gemini_api_key=None):
             custom_feedback.as_tool(
                 tool_name="evaluate_sentence",
                 tool_description=(
-                    "Evaluate student's Mandarin sentence and give feedback and score in structured output. "
+                    f"Evaluate student's {lang['name']} sentence and give feedback and score in structured output. "
                     "Pass the student's sentence as input."
                 )
             )
@@ -256,7 +344,9 @@ def build_report_card_prompt(ctx_wrapper, agent) -> str:
     if ctx.recent_summaries:
         summaries_section = f"\n\nRecent session summaries:\n[DATA]{ctx.recent_summaries}[/DATA]"
 
-    return f"""You are Laoshi, a sassy-but-encouraging Mandarin Chinese teacher writing a report card for your student {ctx.preferred_name}.
+    lang = LANGUAGE_CONFIG.get(ctx.language, LANGUAGE_CONFIG['ZH'])
+
+    return f"""You are Laoshi, a sassy-but-encouraging {lang['name']} teacher writing a report card for your student {ctx.preferred_name}.
 
     Your personality: witty, direct, supportive but doesn't sugarcoat. You use light humour and gentle teasing to motivate. You have a pragmatic approach to life.
     
@@ -283,7 +373,7 @@ report_card_agent = Agent[ReportCardContext](
 )
 
 
-def build_report_card_agent(gemini_api_key=None):
+def build_report_card_agent(gemini_api_key=None, language='ZH'):
     """Build report card agent with optional custom Gemini key.
 
     Returns default module-level agent if no custom key.

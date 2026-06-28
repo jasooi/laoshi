@@ -85,7 +85,7 @@ const Register = () => {
 
     try {
       // Step 1: Register
-      await api.post('/api/users', { username, email, password })
+      await api.post('/api/users', { username, email, password, client_id: 'laoshi-web' })
 
       // Step 2: Auto-login
       await login(username, password)

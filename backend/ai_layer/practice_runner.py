@@ -13,7 +13,7 @@ from agents.extensions.memory import RedisSession
 
 from models import Word, User, UserSession, SessionWord, SessionWordAttempt, UserProfile, Deck
 from ai_layer.context import UserSessionContext, WordContext
-from ai_layer.chat_agents import laoshi_agent, summary_agent, build_agents
+from ai_layer.chat_agents import build_agents
 from ai_layer.mem0_setup import mem0_client
 from crypto_utils import decrypt_api_key
 from config import Config
@@ -111,14 +111,16 @@ def get_session(session_id: int):
     return None
 
 
-def get_user_agent(user, session_ds_version=None, session_gemini_version=None):
+def get_user_agent(user, session_ds_version=None, session_gemini_version=None, language='ZH'):
     """Get the appropriate agents for the user (custom BYOK keys or default).
 
     Checks key versions to detect mid-session key changes.
     Returns (orchestrator_agent, summary_agent, current_ds_version, current_gemini_version).
     """
     if not user.profile:
-        return laoshi_agent, summary_agent, 1, 1
+        from ai_layer.chat_agents import build_agents as build_agents_fn
+        orch, summ = build_agents_fn(language=language)
+        return orch, summ, 1, 1
 
     ds_key = None
     gemini_key = None
@@ -141,14 +143,21 @@ def get_user_agent(user, session_ds_version=None, session_gemini_version=None):
         logger.info(f"Key version change detected: ds={ds_changed}, gemini={gemini_changed}")
 
     if not ds_key and not gemini_key:
-        return laoshi_agent, summary_agent, current_ds_version, current_gemini_version
+        from ai_layer.chat_agents import build_agents as build_agents_fn
+        orch, summ = build_agents_fn(language=language)
+        return orch, summ, current_ds_version, current_gemini_version
 
-    orch, summ = build_agents(deepseek_api_key=ds_key, gemini_api_key=gemini_key)
+    orch, summ = build_agents(deepseek_api_key=ds_key, gemini_api_key=gemini_key, language=language)
     return orch, summ, current_ds_version, current_gemini_version
 
 
 def hydrate_context(user, session, session_words, mem0_prefs=None):
     """Build UserSessionContext from DB objects."""
+    # Determine language from deck
+    language = 'ZH'
+    if session.deck:
+        language = session.deck.language or 'ZH'
+
     session_words_sorted = sorted(session_words, key=lambda sw: sw.word_order)
 
     # Build word roster
@@ -156,7 +165,7 @@ def hydrate_context(user, session, session_words, mem0_prefs=None):
     for sw in session_words_sorted:
         w = sw.word
         word_roster.append(WordContext(
-            word_id=w.id, word=w.word, pinyin=w.pinyin, meaning=w.meaning
+            word_id=w.id, word=w.word, reading=w.reading, meaning=w.meaning, language=language
         ))
 
     # Derive session_word_dict, current_word, and counts
@@ -173,7 +182,7 @@ def hydrate_context(user, session, session_words, mem0_prefs=None):
         elif sw.status == 0 and current_word is None:  # pending and first one
             w = sw.word
             current_word = WordContext(
-                word_id=w.id, word=w.word, pinyin=w.pinyin, meaning=w.meaning
+                word_id=w.id, word=w.word, reading=w.reading, meaning=w.meaning, language=language
             )
 
     session_complete = all(v != 0 for v in session_word_dict.values())
@@ -195,6 +204,7 @@ def hydrate_context(user, session, session_words, mem0_prefs=None):
         session_complete=session_complete,
         mem0_preferences=mem0_prefs,
         word_roster=word_roster,
+        language=language,
     )
 
 
@@ -400,6 +410,9 @@ def initialize_session(user_id: int, deck_id: int, words_count: int | None = Non
         else:
             words_count = Config.DEFAULT_WORDS_PER_SESSION
 
+    # Determine language from deck
+    language = deck.language or 'ZH'
+
     # Select words using SRS algorithm
     selected_words = select_srs_words(deck_id, user_id, words_count)
 
@@ -444,7 +457,7 @@ def initialize_session(user_id: int, deck_id: int, words_count: int | None = Non
     ctx = hydrate_context(user, session, session_words, mem0_prefs)
 
     # Get user-specific agent (with BYOK support) and store key versions
-    agent, _, ds_ver, gemini_ver = get_user_agent(user)
+    agent, _, ds_ver, gemini_ver = get_user_agent(user, language=language)
 
     # Generate greeting
     session_obj = get_session(session.id)
@@ -462,7 +475,7 @@ def initialize_session(user_id: int, deck_id: int, words_count: int | None = Non
         'current_word': {
             'word_id': ctx.current_word.word_id,
             'word': ctx.current_word.word,
-            'pinyin': ctx.current_word.pinyin,
+            'reading': ctx.current_word.reading,
             'meaning': ctx.current_word.meaning,
         } if ctx.current_word else None,
         'greeting_message': greeting,
@@ -484,6 +497,11 @@ def handle_message(session_id: int, user_id: int, message: str):
     if session.session_end_ds is not None:
         return None, "Session is already complete"
 
+    # Determine language from deck
+    language = 'ZH'
+    if session.deck:
+        language = session.deck.language or 'ZH'
+
     # Hydrate context
     session_words = SessionWord.get_list_by_session_id(session_id)
     ctx = hydrate_context(user, session, session_words)
@@ -494,7 +512,7 @@ def handle_message(session_id: int, user_id: int, message: str):
     # Get user-specific agent (with BYOK support and version tracking)
     try:
         logger.info(f"Getting agent for user {user_id}")
-        agent, _, ds_ver, gemini_ver = get_user_agent(user)
+        agent, _, ds_ver, gemini_ver = get_user_agent(user, language=language)
 
         # Run orchestrator
         logger.info(f"Running agent for session {session_id}")
@@ -549,7 +567,7 @@ def handle_message(session_id: int, user_id: int, message: str):
         'current_word': {
             'word_id': ctx.current_word.word_id,
             'word': ctx.current_word.word,
-            'pinyin': ctx.current_word.pinyin,
+            'reading': ctx.current_word.reading,
             'meaning': ctx.current_word.meaning,
         },
         'words_practiced': ctx.words_practiced,
@@ -633,6 +651,11 @@ def advance_word(session_id: int, user_id: int, quality: int | None = None):
             word.next_review_date = date.today() + timedelta(days=1)
         word.update()
 
+    # Determine language from deck
+    language = 'ZH'
+    if session.deck:
+        language = session.deck.language or 'ZH'
+
     # Re-hydrate context to check completion and find next word
     session_words = SessionWord.get_list_by_session_id(session_id)
     ctx = hydrate_context(user, session, session_words)
@@ -645,11 +668,11 @@ def advance_word(session_id: int, user_id: int, quality: int | None = None):
         return result, None
 
     # Get user-specific agent (with BYOK support and version tracking)
-    agent, _, ds_ver, gemini_ver = get_user_agent(user)
+    agent, _, ds_ver, gemini_ver = get_user_agent(user, language=language)
 
     # Introduce next word
     session_obj = get_session(session_id)
-    next_word_msg = f"The student has moved to the next word. Introduce it: {ctx.current_word.word} ({ctx.current_word.pinyin}) - {ctx.current_word.meaning}"
+    next_word_msg = f"The student has moved to the next word. Introduce it: {ctx.current_word.word} ({ctx.current_word.reading}) - {ctx.current_word.meaning}"
     result = run_async(run_with_retry(
         agent, input=next_word_msg, context=ctx, session=session_obj
     ))
@@ -662,7 +685,7 @@ def advance_word(session_id: int, user_id: int, quality: int | None = None):
         'current_word': {
             'word_id': ctx.current_word.word_id,
             'word': ctx.current_word.word,
-            'pinyin': ctx.current_word.pinyin,
+            'reading': ctx.current_word.reading,
             'meaning': ctx.current_word.meaning,
         } if ctx.current_word else None,
         'words_practiced': ctx.words_practiced,
@@ -681,11 +704,16 @@ def complete_session(session_id: int, user_id: int):
         return None, "Session not found"
 
     session_words = SessionWord.get_list_by_session_id(session_id)
+
+    language = 'ZH'
+    if session.deck:
+        language = session.deck.language or 'ZH'
+
     ctx = hydrate_context(user, session, session_words)
     ctx.session_complete = True
 
     # Get user-specific summary agent (with BYOK support)
-    _, summ_agent, ds_ver, gemini_ver = get_user_agent(user)
+    _, summ_agent, ds_ver, gemini_ver = get_user_agent(user, language=language)
 
     # Run summary agent directly (no handoff needed)
     session_obj = get_session(session_id)

@@ -33,7 +33,11 @@
       "Bash(flask db:*)",
       "Bash(pip show:*)",
       "Bash(pip install:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(git mv:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd.exe /c \"del /f /q c:\\\\Users\\\\Jasmine\\\\Desktop\\\\learningScripts\\\\laoshi-coach\\\\laoshi\\\\nul\")",
+      "Bash(git -C \"c:/Users/Jasmine/Desktop/learningScripts/laoshi-coach/laoshi\" status --short)"
     ]
   },
   "enabledPlugins": {

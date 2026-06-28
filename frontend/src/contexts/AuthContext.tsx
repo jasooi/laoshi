@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (username: string, password: string) => {
     // POST /api/token with withCredentials so the refresh cookie is set
-    const response = await api.post('/api/token', { username, password }, {
+    const response = await api.post('/api/token', { username, password, client_id: 'laoshi-web' }, {
       withCredentials: true,
     })
     const accessToken = response.data.access_token

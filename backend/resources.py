@@ -53,7 +53,7 @@ def validate_password(password: str) -> tuple[bool, str]:
 # Word field length limits matching database column sizes
 WORD_FIELD_LIMITS = {
     'word': 150,
-    'pinyin': 150,
+    'reading': 150,
     'meaning': 300,
     'notes': 200,
 }
@@ -75,7 +75,7 @@ class WordListResource(Resource):
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 20, type=int)
         search = request.args.get('search', '', type=str).strip()
-        sort_by = request.args.get('sort_by', 'pinyin', type=str)
+        sort_by = request.args.get('sort_by', 'reading', type=str)
         deck_id = request.args.get('deck_id', type=int)
 
         base_query = Word.get_query_for_user(vc_user)
@@ -89,7 +89,7 @@ class WordListResource(Resource):
             base_query = base_query.filter(
                 db.or_(
                     Word.word.ilike(pattern),
-                    Word.pinyin.ilike(pattern),
+                    Word.reading.ilike(pattern),
                     Word.meaning.ilike(pattern),
                 )
             )
@@ -97,7 +97,7 @@ class WordListResource(Resource):
         if sort_by == 'word':
             base_query = base_query.order_by(Word.word)
         else:
-            base_query = base_query.order_by(Word.pinyin)
+            base_query = base_query.order_by(Word.reading)
 
         items, pagination = paginate_query(base_query, page=page, per_page=per_page)
         data = [w.format_data(vc_user) for w in items]
@@ -136,7 +136,7 @@ class WordResource(Resource):
         if err:
             return {"error": err}, 400
 
-        allowable_fields = ["word", "pinyin", "meaning", "notes"]
+        allowable_fields = ["word", "reading", "meaning", "notes"]
         fields_to_update = [k for k in data.keys() if k in allowable_fields]
 
         if len(fields_to_update) == 0:
@@ -266,6 +266,19 @@ class UserListResource(Resource):
             password = data['password']
         except KeyError:
             return {"error": "Username, email, and password are required"}, 400
+
+        # Validate client_id if provided
+        client_id = data.get('client_id')
+        if client_id:
+            from flask import current_app
+            oauth_clients = current_app.config.get('OAUTH_CLIENTS', {})
+            client_config = oauth_clients.get(client_id)
+            if not client_config:
+                return {"error": "Invalid client_id"}, 400
+            if client_config.get('secret_required'):
+                client_secret = data.get('client_secret')
+                if not client_secret or client_secret != client_config.get('secret'):
+                    return {"error": "Invalid client credentials"}, 401
 
         # Validate field lengths
         if not username or len(username) < 3 or len(username) > 80:
@@ -610,11 +623,25 @@ class TokenResource(Resource):
     # This is the login endpoint
     from extensions import limiter
 
-    @limiter.limit("5 per minute")
+    @limiter.limit("10 per minute")
     def post(self):
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
+        client_id = data.get('client_id')
+
+        # Validate client credentials
+        from flask import current_app
+        oauth_clients = current_app.config.get('OAUTH_CLIENTS', {})
+        if client_id:
+            client_config = oauth_clients.get(client_id)
+            if not client_config:
+                return {'message': 'Invalid client_id'}, 400
+            # Validate client_secret for confidential clients
+            if client_config.get('secret_required'):
+                client_secret = data.get('client_secret')
+                if not client_secret or client_secret != client_config.get('secret'):
+                    return {'message': 'Invalid client credentials'}, HTTPStatus.UNAUTHORIZED
 
         user = User.get_by_username(username)
 
@@ -639,10 +666,51 @@ class TokenResource(Resource):
 class TokenRefreshResource(Resource):
     from extensions import limiter
 
-    @limiter.limit("10 per minute")
-    @jwt_required(refresh=True)
+    @limiter.limit("30 per minute")
     def post(self):
-        """Issue a new access token + rotated refresh token."""
+        """Issue a new access token + rotated refresh token.
+
+        Supports two flows:
+        1. Cookie-based (web): refresh token from httpOnly cookie (standard flask-jwt-extended)
+        2. Body-based (mobile): refresh token sent in JSON body as 'refresh_token'
+        """
+        data = request.get_json(silent=True) or {}
+        body_refresh_token = data.get('refresh_token')
+
+        if body_refresh_token:
+            # Mobile flow: manually decode the refresh token from JSON body
+            try:
+                from flask_jwt_extended import decode_token
+                decoded = decode_token(body_refresh_token)
+                if decoded.get('type') != 'refresh':
+                    return {'message': 'Invalid token type'}, HTTPStatus.UNAUTHORIZED
+                identity = decoded['sub']
+                old_jti = decoded['jti']
+
+                # Blocklist the old refresh token
+                now = datetime.now()
+                blocklist_entry = TokenBlocklist(jti=old_jti, created_ds=now)
+                blocklist_entry.add()
+
+                # Issue new tokens
+                new_access_token = create_access_token(identity=identity)
+                new_refresh_token = create_refresh_token(identity=identity)
+
+                return {
+                    'access_token': new_access_token,
+                    'refresh_token': new_refresh_token,
+                }, HTTPStatus.OK
+            except Exception as e:
+                logger.warning(f"Mobile refresh token decode failed: {e}")
+                return {'message': 'Invalid or expired refresh token'}, HTTPStatus.UNAUTHORIZED
+        else:
+            # Web flow: refresh token from cookie (existing behavior)
+            # Requires @jwt_required(refresh=True) — call inner handler
+            return self._cookie_refresh()
+
+    @jwt_required(refresh=True)
+    def _cookie_refresh(self):
+        """Cookie-based refresh (web clients)."""
         identity = get_jwt_identity()
         old_jti = get_jwt()['jti']
 

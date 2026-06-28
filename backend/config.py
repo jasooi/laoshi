@@ -49,6 +49,19 @@ class Config():
     RATELIMIT_STORAGE_URI = 'memory://'
     RATELIMIT_STRATEGY = 'fixed-window'
 
+    # OAuth2 Client Credentials
+    OAUTH_CLIENTS = {
+        'laoshi-web': {
+            'type': 'web',
+            'secret_required': False,   # Public client (SPA)
+        },
+        'laoshi-android': {
+            'type': 'mobile',
+            'secret_required': True,    # Confidential client
+            'secret': os.getenv('ANDROID_CLIENT_SECRET'),
+        },
+    }
+
 
 class TestConfig(Config):
     TESTING = True
@@ -60,4 +73,15 @@ class TestConfig(Config):
     # Valid Fernet key for deterministic tests (32 bytes base64-encoded)
     ENCRYPTION_KEY = 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkwMTIzNDU2Nzg5MA=='
     RATELIMIT_ENABLED = False  # Disable rate limiting in tests
+    OAUTH_CLIENTS = {
+        'laoshi-web': {
+            'type': 'web',
+            'secret_required': False,
+        },
+        'laoshi-android': {
+            'type': 'mobile',
+            'secret_required': True,
+            'secret': 'test-android-secret',
+        },
+    }
 

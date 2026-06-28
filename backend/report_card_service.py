@@ -171,7 +171,7 @@ def get_score_description(score_type: str, score: float | None) -> str | None:
     return None
 
 
-def generate_report_card_feedback(user_id: int) -> str:
+def generate_report_card_feedback(user_id: int, language: str = 'ZH') -> str:
     """Generate and store AI teacher feedback. Returns the feedback text."""
     try:
         user = User.get_by_id(user_id)
@@ -216,7 +216,7 @@ def generate_report_card_feedback(user_id: int) -> str:
                 gemini_key = decrypt_api_key(profile.encrypted_gemini_api_key)
             except Exception:
                 pass
-        agent = build_report_card_agent(gemini_api_key=gemini_key)
+        agent = build_report_card_agent(gemini_api_key=gemini_key, language=language)
 
         # Build context and run agent
         ctx = ReportCardContext(
@@ -227,6 +227,7 @@ def generate_report_card_feedback(user_id: int) -> str:
             avg_grammar=avg_grammar,
             avg_usage=avg_usage,
             avg_naturalness=avg_naturalness,
+            language=language,
         )
 
         from agents import RunContextWrapper

@@ -26,7 +26,7 @@ def user_with_data(db):
     deck.add()
 
     word = Word(
-        word='测试', pinyin='cèshì', meaning='test',
+        word='测试', reading='cèshì', meaning='test',
         user_id=user.id, deck_id=deck.id,
     )
     word.add()

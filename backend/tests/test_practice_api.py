@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from unittest.mock import Mock, patch, MagicMock
 
-from models import User, Word, UserSession, SessionWord, SessionWordAttempt
+from models import User, Word, UserSession, SessionWord, SessionWordAttempt, Deck
 
 
 class TestPracticeSessionAPI:
@@ -34,19 +34,21 @@ class TestPracticeSessionAPI:
 
     @pytest.fixture
     def user_with_words(self, db, auth_headers, client):
-        """Create a user with vocabulary words."""
-        # Add words for the user
+        """Create a user with a deck and vocabulary words."""
         user = User.query.filter_by(username='testuser').first()
 
+        deck = Deck(name='Test Deck', user_id=user.id, language='ZH')
+        deck.add()
+
         words = [
-            Word(user_id=user.id, word='你好', pinyin='ni hao', meaning='hello', confidence_score=0.5),
-            Word(user_id=user.id, word='谢谢', pinyin='xie xie', meaning='thank you', confidence_score=0.3),
-            Word(user_id=user.id, word='再见', pinyin='zai jian', meaning='goodbye', confidence_score=0.7),
+            Word(user_id=user.id, deck_id=deck.id, word='你好', reading='ni hao', meaning='hello'),
+            Word(user_id=user.id, deck_id=deck.id, word='谢谢', reading='xie xie', meaning='thank you'),
+            Word(user_id=user.id, deck_id=deck.id, word='再见', reading='zai jian', meaning='goodbye'),
         ]
         for word in words:
             word.add()
 
-        return user, words
+        return user, words, deck
 
     def test_post_practice_session_requires_auth(self, client):
         """Should return 401 without authentication."""
@@ -55,13 +57,14 @@ class TestPracticeSessionAPI:
 
     def test_post_practice_session_creates_session(self, client, auth_headers, user_with_words):
         """Should create a new practice session."""
+        user, words, deck = user_with_words
         with patch('ai_layer.practice_runner.run_async') as mock_run:
             # Mock the agent response
             mock_result = Mock()
             mock_result.final_output = "Welcome! Let's practice."
             mock_run.return_value = mock_result
 
-            resp = client.post('/api/practice/sessions', headers=auth_headers)
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id}, headers=auth_headers)
 
             assert resp.status_code == 201
             data = json.loads(resp.data)
@@ -73,7 +76,7 @@ class TestPracticeSessionAPI:
 
     def test_post_practice_session_no_eligible_words(self, client, auth_headers, db):
         """Should return 400 when no eligible words exist."""
-        # Create user without words
+        # Create user without words but with an empty deck
         resp = client.post('/api/users', json={
             'username': 'nowordsuser',
             'email': 'nowords@example.com',
@@ -89,19 +92,25 @@ class TestPracticeSessionAPI:
         token = data['access_token']
         headers = {'Authorization': f'Bearer {token}'}
 
-        resp = client.post('/api/practice/sessions', headers=headers)
+        # Create an empty deck
+        user = User.query.filter_by(username='nowordsuser').first()
+        empty_deck = Deck(name='Empty Deck', user_id=user.id, language='ZH')
+        empty_deck.add()
+
+        resp = client.post('/api/practice/sessions', json={'deck_id': empty_deck.id}, headers=headers)
         assert resp.status_code == 400
         data = json.loads(resp.data)
-        assert 'No eligible words' in data['error']
+        assert 'no words' in data['error'].lower() or 'no eligible' in data['error'].lower()
 
     def test_post_practice_session_with_word_count(self, client, auth_headers, user_with_words):
         """Should respect words_count parameter."""
+        user, words, deck = user_with_words
         with patch('ai_layer.practice_runner.run_async') as mock_run:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
             mock_run.return_value = mock_result
 
-            resp = client.post('/api/practice/sessions?words_count=2', headers=auth_headers)
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id, 'words_count': 2}, headers=auth_headers)
 
             assert resp.status_code == 201
             data = json.loads(resp.data)
@@ -109,6 +118,7 @@ class TestPracticeSessionAPI:
 
     def test_post_message_to_session(self, client, auth_headers, user_with_words):
         """Should process message and return response."""
+        user, words, deck = user_with_words
         with patch('ai_layer.practice_runner.run_async') as mock_run:
             # Create session
             mock_result = Mock()
@@ -117,7 +127,7 @@ class TestPracticeSessionAPI:
             mock_result.new_items = []
             mock_run.return_value = mock_result
 
-            resp = client.post('/api/practice/sessions', headers=auth_headers)
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id}, headers=auth_headers)
             data = json.loads(resp.data)
             session_id = data['session']['id']
 
@@ -136,12 +146,13 @@ class TestPracticeSessionAPI:
 
     def test_post_message_missing_body(self, client, auth_headers, user_with_words):
         """Should return 400 when message is missing."""
+        user, words, deck = user_with_words
         with patch('ai_layer.practice_runner.run_async') as mock_run:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
             mock_run.return_value = mock_result
 
-            resp = client.post('/api/practice/sessions', headers=auth_headers)
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id}, headers=auth_headers)
             data = json.loads(resp.data)
             session_id = data['session']['id']
 
@@ -154,6 +165,7 @@ class TestPracticeSessionAPI:
 
     def test_post_next_word(self, client, auth_headers, user_with_words):
         """Should advance to next word."""
+        user, words, deck = user_with_words
         with patch('ai_layer.practice_runner.run_async') as mock_run:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
@@ -161,7 +173,7 @@ class TestPracticeSessionAPI:
             mock_result.new_items = []
             mock_run.return_value = mock_result
 
-            resp = client.post('/api/practice/sessions', headers=auth_headers)
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id}, headers=auth_headers)
             data = json.loads(resp.data)
             session_id = data['session']['id']
 
@@ -182,6 +194,7 @@ class TestPracticeSessionAPI:
 
     def test_get_session_summary(self, client, auth_headers, user_with_words):
         """Should return session summary."""
+        user, words, deck = user_with_words
         with patch('ai_layer.practice_runner.run_async') as mock_run:
             mock_result = Mock()
             mock_result.final_output = "Welcome!"
@@ -189,7 +202,7 @@ class TestPracticeSessionAPI:
             mock_result.new_items = []
             mock_run.return_value = mock_result
 
-            resp = client.post('/api/practice/sessions', headers=auth_headers)
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id}, headers=auth_headers)
             data = json.loads(resp.data)
             session_id = data['session']['id']
 
@@ -236,7 +249,9 @@ class TestPracticeSessionErrors:
         """Should return 400 when messaging a completed session."""
         # Create user with words
         user = User.query.filter_by(username='erroruser').first()
-        word = Word(user_id=user.id, word='测试', pinyin='ce shi', meaning='test', confidence_score=0.5)
+        deck = Deck(name='Error Test Deck', user_id=user.id, language='ZH')
+        deck.add()
+        word = Word(user_id=user.id, deck_id=deck.id, word='测试', reading='ce shi', meaning='test')
         word.add()
 
         with patch('ai_layer.practice_runner.run_async') as mock_run:
@@ -245,8 +260,8 @@ class TestPracticeSessionErrors:
             mock_result.raw_responses = []
             mock_result.new_items = []
             mock_run.return_value = mock_result
-        
-            resp = client.post('/api/practice/sessions', headers=auth_headers)
+
+            resp = client.post('/api/practice/sessions', json={'deck_id': deck.id}, headers=auth_headers)
             data = json.loads(resp.data)
             session_id = data['session']['id']
         

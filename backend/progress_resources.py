@@ -34,15 +34,17 @@ class ProgressStatsResource(Resource):
             UserSession.session_start_ds >= today_start
         ).scalar() or 0
 
-        # Mastery percentage (strictly > 0.9 to match Word.STATUS_THRESHOLDS)
-        mastered_count = Word.query.filter_by(user_id=user_id).filter(
-            Word.confidence_score > 0.9
-        ).count()
+        # Mastery percentage (is_mastered=True, set by SRS quality ratings)
+        mastered_count = Word.query.filter_by(user_id=user_id, is_mastered=True).count()
         mastery_percentage = round(mastered_count / total_words * 100)
 
-        # Words ready for review (confidence < 0.9, matches practice_runner word selection)
+        # Words ready for review (due or overdue per SRS schedule, or new words never reviewed)
+        today = datetime.now(timezone.utc).date()
         words_ready = Word.query.filter_by(user_id=user_id).filter(
-            Word.confidence_score < 0.9
+            db.or_(
+                Word.next_review_date <= today,
+                Word.next_review_date.is_(None)
+            )
         ).count()
 
         return {

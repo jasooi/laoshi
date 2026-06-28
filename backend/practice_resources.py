@@ -72,7 +72,7 @@ class PracticeSessionDetailResource(Resource):
                 current_word = {
                     'word_id': w.id,
                     'word': w.word,
-                    'pinyin': w.pinyin,
+                    'reading': w.reading,
                     'meaning': w.meaning,
                 }
                 break

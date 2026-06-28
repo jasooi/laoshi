@@ -42,8 +42,8 @@ class TestReportCardAPI:
         profile.add()
 
         # Create words
-        word1 = Word(user_id=user.id, word='你好', pinyin='ni hao', meaning='hello', confidence_score=0.6)
-        word2 = Word(user_id=user.id, word='谢谢', pinyin='xie xie', meaning='thank you', confidence_score=0.4)
+        word1 = Word(user_id=user.id, word='你好', reading='ni hao', meaning='hello')
+        word2 = Word(user_id=user.id, word='谢谢', reading='xie xie', meaning='thank you')
         word1.add()
         word2.add()
 
@@ -224,7 +224,7 @@ class TestReportCardAPI:
         """Should aggregate metrics across multiple sessions."""
         user = User.query.filter_by(username='testuser').first()
 
-        word = Word(user_id=user.id, word='学习', pinyin='xue xi', meaning='study', confidence_score=0.5)
+        word = Word(user_id=user.id, word='学习', reading='xue xi', meaning='study')
         word.add()
 
         now = datetime.now(timezone.utc)
@@ -327,4 +327,4 @@ class TestGenerateFeedbackAPI:
             mock_gen.return_value = "Feedback text"
             client.post('/api/progress/generate-feedback', headers=auth_headers)
 
-            mock_gen.assert_called_once_with(user.id)
+            mock_gen.assert_called_once_with(user.id, language='ZH')

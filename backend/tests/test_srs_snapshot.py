@@ -24,7 +24,7 @@ class TestSrsSnapshotSaving:
         word = Word(
             user_id=user.id,
             word='你好',
-            pinyin='ni hao',
+            reading='ni hao',
             meaning='hello',
             repetitions=1,
             interval_days=3,
@@ -63,7 +63,7 @@ class TestSrsSnapshotSaving:
         word2 = Word(
             user_id=user.id,
             word='谢谢',
-            pinyin='xie xie',
+            reading='xie xie',
             meaning='thank you',
             repetitions=0,
             interval_days=1,
@@ -220,7 +220,7 @@ class TestSessionWordSrsSnapshotColumn:
         session = UserSession(user_id=user.id)
         session.add()
 
-        word = Word(user_id=user.id, word='测试', pinyin='ce shi', meaning='test')
+        word = Word(user_id=user.id, word='测试', reading='ce shi', meaning='test')
         word.add()
 
         # Create session word without snapshot (should be null)
@@ -243,7 +243,7 @@ class TestSessionWordSrsSnapshotColumn:
         session = UserSession(user_id=user.id)
         session.add()
 
-        word = Word(user_id=user.id, word='存储', pinyin='cun chu', meaning='store')
+        word = Word(user_id=user.id, word='存储', reading='cun chu', meaning='store')
         word.add()
 
         snapshot = {
@@ -280,7 +280,7 @@ class TestSessionWordSrsSnapshotColumn:
         session = UserSession(user_id=user.id)
         session.add()
 
-        word = Word(user_id=user.id, word='格式', pinyin='ge shi', meaning='format')
+        word = Word(user_id=user.id, word='格式', reading='ge shi', meaning='format')
         word.add()
 
         sw = SessionWord(

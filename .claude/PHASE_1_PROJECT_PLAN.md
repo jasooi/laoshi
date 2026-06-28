@@ -1,8 +1,8 @@
-# Laoshi -- Project Plan
+# Laoshi -- Phase 1 Project Plan (Webapp)
 
-> Execution roadmap for the Laoshi Mandarin learning app.
+> Execution roadmap for the Laoshi Mandarin learning webapp (Phase 1).
 > For business requirements, see [PRD.md](PRD.md). For technical architecture, see [architecture.md](architecture.md).
-> Detailed implementation specs live in `.claudedocs/<milestone-name>/` folders. 
+> Detailed implementation specs live in `.claudedocs/<milestone-name>/` folders.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ```
 PRD.md (what to build & why)
-  --> PROJECT_PLAN.md (when to build it -- this file)
+  --> PHASE_1_PROJECT_PLAN.md (when to build it -- this file)
     --> .claudedocs/<milestone-name>/  (how to build it)
           ├── requirements.md   Acceptance criteria extracted from PRD
           ├── design.md         Technical architecture & approach (architecture.md is source of truth)

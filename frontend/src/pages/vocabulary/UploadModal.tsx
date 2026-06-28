@@ -85,11 +85,14 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
       })
 
       const headers = parseResult.meta.fields?.map(f => f.trim().toLowerCase()) || []
-      const requiredColumns = ['word', 'pinyin', 'meaning']
+      const requiredColumns = ['word', 'meaning']
       const missingColumns = requiredColumns.filter(col => !headers.includes(col))
+      const hasReading = headers.includes('reading')
+      const hasPinyin = headers.includes('pinyin')
 
-      if (missingColumns.length > 0) {
-        setUploadError(`CSV is missing required columns: ${missingColumns.join(', ')}. Your CSV must have columns named "word", "pinyin", and "meaning".`)
+      if (missingColumns.length > 0 || (!hasReading && !hasPinyin)) {
+        const allMissing = [...missingColumns, ...(!hasReading && !hasPinyin ? ['reading'] : [])]
+        setUploadError(`CSV is missing required columns: ${allMissing.join(', ')}. Your CSV must have columns named "word", "reading" (or "pinyin"), and "meaning".`)
         return
       }
 
@@ -103,25 +106,27 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
         fieldMap[f.trim().toLowerCase()] = f
       })
 
+      const readingKey = hasReading ? 'reading' : 'pinyin'
+
       const allRows = parseResult.data.map(row => ({
         word: row[fieldMap['word']],
-        pinyin: row[fieldMap['pinyin']],
+        reading: row[fieldMap[readingKey]],
         meaning: row[fieldMap['meaning']],
         notes: sourceName.trim(),
       }))
 
-      const validRows = allRows.filter(w => w.word && w.pinyin && w.meaning)
+      const validRows = allRows.filter(w => w.word && w.reading && w.meaning)
       const skippedCount = allRows.length - validRows.length
 
       if (validRows.length === 0) {
-        setUploadError('All rows have empty required fields (word, pinyin, or meaning). Please check your CSV.')
+        setUploadError('All rows have empty required fields (word, reading, or meaning). Please check your CSV.')
         return
       }
 
       await api.post('/api/words', validRows)
 
       if (skippedCount > 0) {
-        onUploadWarning(`${skippedCount} row(s) were excluded due to missing data (word, pinyin, or meaning).`)
+        onUploadWarning(`${skippedCount} row(s) were excluded due to missing data (word, reading, or meaning).`)
       }
       setSelectedFile(null)
       setSourceName('')
@@ -157,7 +162,7 @@ const UploadModal = ({ isOpen, onClose, onUploadSuccess, onUploadWarning }: Uplo
               </svg>
             </button>
           </div>
-          <p className="text-sm text-warm-muted">Only .csv files are accepted. Required columns: word, pinyin, meaning</p>
+          <p className="text-sm text-warm-muted">Only .csv files are accepted. Required columns: word, reading, meaning</p>
         </div>
 
         {/* Upload Area */}

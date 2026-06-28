@@ -90,6 +90,11 @@ def get_decks():
     # Get all decks for user
     decks = Deck.get_by_user_id(user.id)
 
+    # Optional language filter
+    language_filter = request.args.get('language')
+    if language_filter:
+        decks = [d for d in decks if d.language == language_filter]
+
     # Build response with stats for each deck
     decks_data = []
     for deck in decks:
@@ -128,10 +133,15 @@ def create_deck():
     if description and len(description) > 500:
         return jsonify({'error': 'Description must be 500 characters or less'}), 400
 
+    language = data.get('language', 'ZH')
+    if language not in Deck.SUPPORTED_LANGUAGES:
+        return jsonify({'error': f'Unsupported language. Must be one of: {", ".join(Deck.SUPPORTED_LANGUAGES)}'}), 400
+
     deck = Deck(
         name=name,
         description=description if description else None,
-        user_id=user.id
+        user_id=user.id,
+        language=language
     )
     deck.add()
 
@@ -247,13 +257,13 @@ def get_deck_words(deck_id):
         query = query.filter(
             db.or_(
                 Word.word.ilike(search_pattern),
-                Word.pinyin.ilike(search_pattern),
+                Word.reading.ilike(search_pattern),
                 Word.meaning.ilike(search_pattern)
             )
         )
 
     # Apply sorting
-    valid_sort_columns = ['word', 'pinyin', 'meaning', 'next_review_date', 'is_mastered']
+    valid_sort_columns = ['word', 'reading', 'meaning', 'next_review_date', 'is_mastered']
     if sort_by not in valid_sort_columns:
         sort_by = 'word'
 
@@ -299,17 +309,17 @@ def add_words_to_deck(deck_id):
 
     for idx, word_data in enumerate(words_data):
         word_text = word_data.get('word', '').strip()
-        pinyin = word_data.get('pinyin', '').strip()
+        reading = (word_data.get('reading') or word_data.get('pinyin', '')).strip()
         meaning = word_data.get('meaning', '').strip()
         notes = word_data.get('notes', '').strip() or None
 
-        if not word_text or not pinyin or not meaning:
-            errors.append(f'Word at index {idx}: word, pinyin, and meaning are required')
+        if not word_text or not reading or not meaning:
+            errors.append(f'Word at index {idx}: word, reading, and meaning are required')
             continue
 
         word = Word(
             word=word_text,
-            pinyin=pinyin,
+            reading=reading,
             meaning=meaning,
             notes=notes,
             user_id=user.id,
@@ -376,11 +386,18 @@ def combine_decks():
             return jsonify({'error': f'Source deck not found: {deck_id}'}), 404
         source_decks.append(deck)
 
+    # Validate all source decks share the same language
+    languages = set(d.language for d in source_decks)
+    if len(languages) > 1:
+        return jsonify({'error': 'Cannot combine decks with different languages'}), 400
+    combined_language = languages.pop()
+
     # Create new deck
     new_deck = Deck(
         name=name,
         description=description if description else None,
-        user_id=user.id
+        user_id=user.id,
+        language=combined_language
     )
     db.session.add(new_deck)
     db.session.flush()  # Get the deck ID
@@ -392,7 +409,7 @@ def combine_decks():
         for source_word in source_words:
             new_word = Word(
                 word=source_word.word,
-                pinyin=source_word.pinyin,
+                reading=source_word.reading,
                 meaning=source_word.meaning,
                 notes=source_word.notes,
                 user_id=user.id,

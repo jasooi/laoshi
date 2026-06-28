@@ -11,11 +11,14 @@ import math
 class Deck(db.Model):
     __tablename__ = 'deck'
 
+    SUPPORTED_LANGUAGES = ('ZH', 'JP')
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String(500), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     laoshi_message = db.Column(db.String(500), nullable=True)
+    language = db.Column(db.String(2), nullable=False, default='ZH', server_default='ZH')
     created_ds = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     updated_ds = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -33,6 +36,7 @@ class Deck(db.Model):
             'description': self.description,
             'user_id': self.user_id,
             'laoshi_message': self.laoshi_message,
+            'language': self.language,
             'created_ds': self.created_ds.isoformat() if self.created_ds else None,
             'updated_ds': self.updated_ds.isoformat() if self.updated_ds else None,
         }
@@ -80,7 +84,7 @@ class Word(db.Model):
     # There is no __init__ for SQLAlchemy model classes! SQLAlchemy takes care of it
     id = db.Column(db.Integer, primary_key=True)
     word = db.Column(db.String(150), nullable=False)
-    pinyin = db.Column(db.String(150), nullable=False)
+    reading = db.Column(db.String(150), nullable=False)
     meaning = db.Column(db.String(300), nullable=False)
     notes = db.Column(db.String(200), nullable=True, default=None)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
@@ -114,7 +118,7 @@ class Word(db.Model):
             return "In Review"
     
     def __repr__(self):
-        return f"{self.id} - {self.word} - {self.pinyin} - {self.meaning}"
+        return f"{self.id} - {self.word} - {self.reading} - {self.meaning}"
 
     def format_data(self, viewer=None):
         # If no viewer or viewer is not the owner, return None (access denied at model level)
@@ -123,7 +127,7 @@ class Word(db.Model):
         return {
             'id': self.id,
             'word': self.word,
-            'pinyin': self.pinyin,
+            'reading': self.reading,
             'meaning': self.meaning,
             'notes': self.notes,
             'deck_id': self.deck_id,

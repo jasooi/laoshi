@@ -7,8 +7,10 @@ from sample_deck_service import (
     seed_sample_deck_for_user,
     user_has_sample_deck,
     load_sample_words_from_csv,
-    SAMPLE_DECK_NAME,
+    SAMPLE_DECK_CONFIG,
 )
+
+SAMPLE_DECK_NAME = SAMPLE_DECK_CONFIG['ZH']['name']
 
 
 class TestLoadSampleWordsFromCsv:
@@ -18,7 +20,7 @@ class TestLoadSampleWordsFromCsv:
         words = load_sample_words_from_csv()
         assert len(words) == 129
         assert words[0]['word'] == '文档'
-        assert words[0]['pinyin'] == 'Wéndàng'
+        assert words[0]['reading'] == 'Wéndàng'
         assert words[0]['meaning'] == 'documentation'
 
     def test_returns_empty_list_if_csv_missing(self, db):

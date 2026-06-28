@@ -204,7 +204,7 @@ export default function PracticePanel() {
         // Page refresh fallback
         const word = response.data.current_word
         setCurrentWord(word)
-        greetingContent = `Let's practice with ${word.word} (${word.pinyin})! This word means "${word.meaning}". Try making a sentence using it.`
+        greetingContent = `Let's practice with ${word.word} (${word.reading})! This word means "${word.meaning}". Try making a sentence using it.`
       }
 
       setLoading(false)

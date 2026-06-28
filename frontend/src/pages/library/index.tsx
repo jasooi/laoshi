@@ -244,7 +244,7 @@ function CreateDeckCSVModal({
 }: {
   isOpen: boolean
   onClose: () => void
-  onCreate: (name: string, description: string, words: { word: string; pinyin: string; meaning: string }[]) => void
+  onCreate: (name: string, description: string, words: { word: string; reading: string; meaning: string }[]) => void
 }) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -284,9 +284,12 @@ function CreateDeckCSVModal({
       // Accept either "meaning" or "english" as the third column
       const hasMeaning = headers.includes('meaning')
       const hasEnglish = headers.includes('english')
+      // Accept either "reading" or "pinyin" for backward compatibility
+      const hasReading = headers.includes('reading')
+      const hasPinyin = headers.includes('pinyin')
 
-      if (!headers.includes('word') || !headers.includes('pinyin') || (!hasMeaning && !hasEnglish)) {
-        setError('CSV must have columns: "word", "pinyin", and "meaning" (or "english").')
+      if (!headers.includes('word') || (!hasReading && !hasPinyin) || (!hasMeaning && !hasEnglish)) {
+        setError('CSV must have columns: "word", "reading" (or "pinyin"), and "meaning" (or "english").')
         return
       }
 
@@ -302,18 +305,19 @@ function CreateDeckCSVModal({
       })
 
       const meaningKey = hasMeaning ? 'meaning' : 'english'
+      const readingKey = hasReading ? 'reading' : 'pinyin'
 
       const allRows = parseResult.data.map(row => ({
         word: (row[fieldMap['word']] || '').trim(),
-        pinyin: (row[fieldMap['pinyin']] || '').trim(),
+        reading: (row[fieldMap[readingKey]] || '').trim(),
         meaning: (row[fieldMap[meaningKey]] || '').trim(),
       }))
 
-      const validRows = allRows.filter(w => w.word && w.pinyin && w.meaning)
+      const validRows = allRows.filter(w => w.word && w.reading && w.meaning)
       const skippedCount = allRows.length - validRows.length
 
       if (validRows.length === 0) {
-        setError('All rows have empty required fields (word, pinyin, or meaning/english).')
+        setError('All rows have empty required fields (word, reading, or meaning/english).')
         return
       }
 
@@ -339,7 +343,7 @@ function CreateDeckCSVModal({
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
         <h3 className="text-lg font-semibold text-warm-black mb-1">Create New Deck</h3>
         <p className="text-sm text-warm-muted mb-4">
-          Upload a CSV with columns: word, pinyin, and meaning (or english)
+          Upload a CSV with columns: word, reading, and meaning (or english)
         </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -753,7 +757,7 @@ export default function Library() {
     }
   }
 
-  const handleCreateDeckFromCSV = async (name: string, description: string, words: { word: string; pinyin: string; meaning: string }[]) => {
+  const handleCreateDeckFromCSV = async (name: string, description: string, words: { word: string; reading: string; meaning: string }[]) => {
     try {
       const deckResponse = await deckApi.createDeck({ name, description })
       const newDeck = deckResponse.data

@@ -4,7 +4,7 @@
 import os
 import logging
 import sys
-from flask import Flask
+from flask import Flask, request
 from flask_restful import Api
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -120,6 +120,13 @@ def create_app(config_class=None):
 
     register_extensions(app)
     register_resources(app)
+
+    # API versioning: rewrite /api/v1/ to /api/ for development
+    # In production, Nginx handles this rewrite
+    @app.before_request
+    def rewrite_v1():
+        if request.path.startswith('/api/v1/'):
+            request.environ['PATH_INFO'] = request.path.replace('/api/v1/', '/api/', 1)
 
     @app.errorhandler(Exception)
     def handle_unhandled_exception(e):

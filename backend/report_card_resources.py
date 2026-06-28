@@ -1,4 +1,5 @@
 """Report Card API endpoints."""
+from flask import request
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import UserProfile
@@ -42,7 +43,9 @@ class GenerateFeedbackResource(Resource):
     @jwt_required()
     def post(self):
         user_id = int(get_jwt_identity())
-        feedback = generate_report_card_feedback(user_id)
+        data = request.get_json(silent=True) or {}
+        language = data.get('language', 'ZH')
+        feedback = generate_report_card_feedback(user_id, language=language)
         return {'feedback': feedback}, 200
 
 

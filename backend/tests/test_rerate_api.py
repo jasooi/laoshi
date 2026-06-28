@@ -41,7 +41,7 @@ class TestRerateEndpoint:
         word = Word(
             user_id=user.id,
             word='你好',
-            pinyin='ni hao',
+            reading='ni hao',
             meaning='hello',
             repetitions=2,
             interval_days=7,
@@ -141,7 +141,7 @@ class TestRerateEndpoint:
         other_word = Word(
             user_id=other_user.id,
             word='测试',
-            pinyin='ce shi',
+            reading='ce shi',
             meaning='test',
         )
         other_word.add()
@@ -156,7 +156,7 @@ class TestRerateEndpoint:
     def test_rerate_no_snapshot_returns_400(self, client, db, auth_headers):
         """Should return 400 when session word has no SRS snapshot."""
         user = User.query.filter_by(username='rerateuser').first()
-        word = Word(user_id=user.id, word='再见', pinyin='zai jian', meaning='goodbye')
+        word = Word(user_id=user.id, word='再见', reading='zai jian', meaning='goodbye')
         word.add()
 
         session = UserSession(user_id=user.id)

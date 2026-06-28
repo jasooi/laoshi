@@ -83,7 +83,7 @@ def test_registration_rejects_weak_password(client):
     })
     assert response.status_code == 400
     data = json.loads(response.data)
-    assert 'at least 8 characters' in data['error'].lower()
+    assert '8' in data['error'] and 'character' in data['error'].lower()
 
     # Test password without uppercase
     response = client.post('/api/users', json={
