@@ -3,7 +3,9 @@
 A Chinese and Japanese language learning web app that helps people practice their sentence formation with AI-powered coaching. You can import your own vocabulary, practice creating sentences with target words, and receive feedback on collocations and word use.
 
 # Why I built this
-Initially, I built this because I realised that English words don't map well to Chinese words. Often, one English word has multiple Chinese translations which all sounded the same and I found that having feedback from a native speaker really helped me to learn how to use each word in the correct context. I wanted to have this sort of feedback as an app or website I could access anywhere anytime, but existing language learning apps didn't allow me to import my own vocabulary. That's why I started building Laoshi.
+Initially, I built this because I realised that English words don't map well to Chinese words. Often, one English word has multiple Chinese translations, which sound very similar but are actually used differently. This was confusing but I found that having feedback from a native speaker really helped me to learn how to use each word in the correct context. I wanted to have this sort of feedback as an app or website I could access anywhere anytime, but existing language learning apps didn't allow me to import my own vocabulary. 
+
+That's why I started building Laoshi.
 
 # Laoshi features
 - Spaced repetition so you are shown the words you need the most practice for
