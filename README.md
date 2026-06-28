@@ -180,12 +180,7 @@ All endpoints are prefixed with `/api`. Most require JWT authentication.
 | Progress | `GET /api/progress/stats` |
 
 
-## Data Models
+## Data
 
-- **User** - Account with username, email, hashed password
-- **UserProfile** - 1:1 with User. Stores preferred name, words per session, encrypted BYOK API keys
-- **Word** - Vocabulary entry with Chinese/Japanese characters, reading, meaning, and 
-- **UserSession** - Practice session with timestamps, summary text, words per session count
-- **SessionWord** - Links words to sessions with averaged scores and correctness tracking
-- **SessionWordAttempt** - Individual sentence attempts with per-attempt feedback scores
-- **TokenBlocklist** - Revoked JWT refresh tokens
+<img width="1693" height="929" alt="image" src="https://github.com/user-attachments/assets/6050700f-da45-46ed-8793-c85320a77107" />
+
