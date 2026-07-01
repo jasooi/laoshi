@@ -20,7 +20,7 @@ Although the name is Laoshi (老师), which is Teacher in Chinese, I have expand
 Now I'm working on enabling Laoshi for mobile, starting with Android.
 
 # Resources
-Demo video: https://youtu.be/htzxkswIqto
+Demo video:  https://youtu.be/XxqqpPEuLoo 
 Try Laoshi at https://laoshi.zeabur.app/login
 
 
